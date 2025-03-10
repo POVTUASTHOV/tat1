@@ -1,0 +1,18 @@
+sudo -u postgres psql -c "CREATE DATABASE nas_db;"
+sudo -u postgres psql -c "CREATE USER nasuser WITH PASSWORD 'password';"
+sudo -u postgres psql -c "ALTER ROLE nasuser SET client_encoding TO 'utf8';"
+sudo -u postgres psql -c "ALTER ROLE nasuser SET default_transaction_isolation TO 'read committed';"
+sudo -u postgres psql -c "ALTER ROLE nasuser SET timezone TO 'UTC';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE nas_db TO nasuser;"
+
+
+python manage.py makemigrations
+python manage.py migrate
+
+# Tạo superuser
+python manage.py createsuperuser
+
+
+
+# Chạy FastAPI server (mở terminal thứ hai)
+uvicorn fastapi.main:app --reload --port 8001
