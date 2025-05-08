@@ -1,10 +1,13 @@
-sudo -u postgres psql -c "CREATE DATABASE nas_db;"
-sudo -u postgres psql -c "CREATE USER nasuser WITH PASSWORD 'password';"
-sudo -u postgres psql -c "ALTER ROLE nasuser SET client_encoding TO 'utf8';"
-sudo -u postgres psql -c "ALTER ROLE nasuser SET default_transaction_isolation TO 'read committed';"
-sudo -u postgres psql -c "ALTER ROLE nasuser SET timezone TO 'UTC';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE nas_db TO nasuser;"
+sudo mysql
 
+CREATE DATABASE nas_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'datamanager'@'localhost' IDENTIFIED BY '123456789';
+GRANT ALL PRIVILEGES ON nas_db.* TO 'datamanager'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+
+SHOW DATABASES;
+SELECT User, Host FROM mysql.user WHERE User='datamanager';
 
 python manage.py makemigrations
 python manage.py migrate
