@@ -15,7 +15,7 @@ python manage.py migrate
 # Tạo superuser
 python manage.py createsuperuser
 
-
+python manage.py runserver
 
 # Chạy FastAPI server (mở terminal thứ hai)
-uvicorn fastapi.main:app --reload --port 8001
+uvicorn fastapi_app.main:app --reload --port 8001

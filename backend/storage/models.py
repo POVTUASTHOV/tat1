@@ -56,7 +56,7 @@ class File(models.Model):
 
 class ChunkedUpload(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    file = models.FileField(upload_to='uploads/chunks/')
+    file = models.CharField(max_length=500)  # Thay vì FileField
     filename = models.CharField(max_length=255)
     content_type = models.CharField(max_length=100)
     chunk_number = models.IntegerField()

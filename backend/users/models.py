@@ -42,7 +42,7 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('email address'), unique=True)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, related_name='users')
-    storage_quota = models.BigIntegerField(default=10737418240)
+    storage_quota = models.BigIntegerField(default=107374182400)  # 100GB cho AI datasets
     storage_used = models.BigIntegerField(default=0)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     
