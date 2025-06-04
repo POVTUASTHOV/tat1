@@ -1136,3 +1136,408 @@ django.db.utils.IntegrityError: (1062, "Duplicate entry '31c1e60feeb14b2fb1f91a9
 INFO 2025-06-03 00:18:08,610 main 63620 132616098014720 Uploading chunk 0/1 for file code.zip
 INFO 2025-06-03 00:18:08,613 main 63620 132616098014720 Chunk 0 written: 1218438 bytes
 INFO 2025-06-03 00:18:08,621 main 63620 132616098014720 Chunk 0 upload successful
+INFO 2025-06-03 08:00:09,869 main 99362 128247827092992 Uploading chunk 0/7 for file 12q.mp4 in project 0a43c21b-bb40-4d83-858a-cb1d237e96d0
+ERROR 2025-06-03 08:00:09,874 main 99362 128247827092992 Error uploading chunk 0: 404: Folder not found
+Traceback (most recent call last):
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 240, in __get__
+    rel_obj = self.field.get_cached_value(instance)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/mixins.py", line 37, in get_cached_value
+    return instance._state.fields_cache[self.cache_name]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'project'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/base/base.py", line 695, in temporary_connection
+    with self.cursor() as cursor:
+         ^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/asyncio.py", line 24, in inner
+    raise SynchronousOnlyOperation(message)
+django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/tat/backup/project/data_management/backend/fastapi_app/main.py", line 198, in upload_chunk
+    if str(folder.project.id) != project_id:
+           ^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 258, in __get__
+    rel_obj = self.get_object(instance)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 221, in get_object
+    return qs.get(self.field.get_reverse_related_filter(instance))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 629, in get
+    num = len(clone)
+          ^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 366, in __len__
+    self._fetch_all()
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 1945, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 1610, in execute_sql
+    sql, params = self.as_sql()
+                  ^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 794, in as_sql
+    self.compile(self.where) if self.where is not None else ("", [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 577, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/where.py", line 151, in as_sql
+    sql, params = compiler.compile(child)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 577, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 426, in as_sql
+    return super().as_sql(compiler, connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 258, in as_sql
+    rhs_sql, rhs_params = self.process_rhs(compiler, connection)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 141, in process_rhs
+    return self.get_db_prep_lookup(value, connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 287, in get_db_prep_lookup
+    [
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 291, in <listcomp>
+    else get_db_prep_value(v, connection, prepared=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/__init__.py", line 2758, in get_db_prep_value
+    if connection.features.has_native_uuid_field:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/features.py", line 310, in has_native_uuid_field
+    is_mariadb = self.connection.mysql_is_mariadb
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 444, in mysql_is_mariadb
+    return "mariadb" in self.mysql_server_info.lower()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 430, in mysql_server_info
+    return self.mysql_server_data["version"]
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 404, in mysql_server_data
+    with self.temporary_connection() as cursor:
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/base/base.py", line 699, in temporary_connection
+    self.close()
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/asyncio.py", line 24, in inner
+    raise SynchronousOnlyOperation(message)
+django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/tat/backup/project/data_management/backend/fastapi_app/main.py", line 201, in upload_chunk
+    raise HTTPException(status_code=404, detail="Folder not found")
+fastapi.exceptions.HTTPException: 404: Folder not found
+INFO 2025-06-03 08:00:09,917 main 99362 128247827092992 Uploading chunk 0/1 for file DJI_0356_W_0001.jpg in project 0a43c21b-bb40-4d83-858a-cb1d237e96d0
+ERROR 2025-06-03 08:00:09,921 main 99362 128247827092992 Error uploading chunk 0: 404: Folder not found
+Traceback (most recent call last):
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 240, in __get__
+    rel_obj = self.field.get_cached_value(instance)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/mixins.py", line 37, in get_cached_value
+    return instance._state.fields_cache[self.cache_name]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'project'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/base/base.py", line 695, in temporary_connection
+    with self.cursor() as cursor:
+         ^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/asyncio.py", line 24, in inner
+    raise SynchronousOnlyOperation(message)
+django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/tat/backup/project/data_management/backend/fastapi_app/main.py", line 198, in upload_chunk
+    if str(folder.project.id) != project_id:
+           ^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 258, in __get__
+    rel_obj = self.get_object(instance)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 221, in get_object
+    return qs.get(self.field.get_reverse_related_filter(instance))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 629, in get
+    num = len(clone)
+          ^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 366, in __len__
+    self._fetch_all()
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 1945, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 1610, in execute_sql
+    sql, params = self.as_sql()
+                  ^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 794, in as_sql
+    self.compile(self.where) if self.where is not None else ("", [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 577, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/where.py", line 151, in as_sql
+    sql, params = compiler.compile(child)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 577, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 426, in as_sql
+    return super().as_sql(compiler, connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 258, in as_sql
+    rhs_sql, rhs_params = self.process_rhs(compiler, connection)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 141, in process_rhs
+    return self.get_db_prep_lookup(value, connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 287, in get_db_prep_lookup
+    [
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 291, in <listcomp>
+    else get_db_prep_value(v, connection, prepared=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/__init__.py", line 2758, in get_db_prep_value
+    if connection.features.has_native_uuid_field:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/features.py", line 310, in has_native_uuid_field
+    is_mariadb = self.connection.mysql_is_mariadb
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 444, in mysql_is_mariadb
+    return "mariadb" in self.mysql_server_info.lower()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 430, in mysql_server_info
+    return self.mysql_server_data["version"]
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 404, in mysql_server_data
+    with self.temporary_connection() as cursor:
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/base/base.py", line 699, in temporary_connection
+    self.close()
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/asyncio.py", line 24, in inner
+    raise SynchronousOnlyOperation(message)
+django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/tat/backup/project/data_management/backend/fastapi_app/main.py", line 201, in upload_chunk
+    raise HTTPException(status_code=404, detail="Folder not found")
+fastapi.exceptions.HTTPException: 404: Folder not found
+INFO 2025-06-03 08:00:09,942 main 99362 128247827092992 Uploading chunk 0/2 for file code.zip in project 0a43c21b-bb40-4d83-858a-cb1d237e96d0
+ERROR 2025-06-03 08:00:09,944 main 99362 128247827092992 Error uploading chunk 0: 404: Folder not found
+Traceback (most recent call last):
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 240, in __get__
+    rel_obj = self.field.get_cached_value(instance)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/mixins.py", line 37, in get_cached_value
+    return instance._state.fields_cache[self.cache_name]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'project'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/base/base.py", line 695, in temporary_connection
+    with self.cursor() as cursor:
+         ^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/asyncio.py", line 24, in inner
+    raise SynchronousOnlyOperation(message)
+django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/tat/backup/project/data_management/backend/fastapi_app/main.py", line 198, in upload_chunk
+    if str(folder.project.id) != project_id:
+           ^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 258, in __get__
+    rel_obj = self.get_object(instance)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 221, in get_object
+    return qs.get(self.field.get_reverse_related_filter(instance))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 629, in get
+    num = len(clone)
+          ^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 366, in __len__
+    self._fetch_all()
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 1945, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 1610, in execute_sql
+    sql, params = self.as_sql()
+                  ^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 794, in as_sql
+    self.compile(self.where) if self.where is not None else ("", [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 577, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/where.py", line 151, in as_sql
+    sql, params = compiler.compile(child)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/sql/compiler.py", line 577, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 426, in as_sql
+    return super().as_sql(compiler, connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 258, in as_sql
+    rhs_sql, rhs_params = self.process_rhs(compiler, connection)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 141, in process_rhs
+    return self.get_db_prep_lookup(value, connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 287, in get_db_prep_lookup
+    [
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/lookups.py", line 291, in <listcomp>
+    else get_db_prep_value(v, connection, prepared=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/models/fields/__init__.py", line 2758, in get_db_prep_value
+    if connection.features.has_native_uuid_field:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/features.py", line 310, in has_native_uuid_field
+    is_mariadb = self.connection.mysql_is_mariadb
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 444, in mysql_is_mariadb
+    return "mariadb" in self.mysql_server_info.lower()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 430, in mysql_server_info
+    return self.mysql_server_data["version"]
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/mysql/base.py", line 404, in mysql_server_data
+    with self.temporary_connection() as cursor:
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/db/backends/base/base.py", line 699, in temporary_connection
+    self.close()
+  File "/home/tat/miniconda3/envs/python11/lib/python3.11/site-packages/django/utils/asyncio.py", line 24, in inner
+    raise SynchronousOnlyOperation(message)
+django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/tat/backup/project/data_management/backend/fastapi_app/main.py", line 201, in upload_chunk
+    raise HTTPException(status_code=404, detail="Folder not found")
+fastapi.exceptions.HTTPException: 404: Folder not found
+INFO 2025-06-03 08:04:55,582 main 105886 127040217740800 Uploading chunk 0/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,582 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,584 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,587 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,589 main 105886 127040217740800 Chunk 0 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,597 main 105886 127040217740800 Chunk 0 upload successful
+INFO 2025-06-03 08:04:55,612 main 105886 127040217740800 Uploading chunk 1/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,612 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,614 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,616 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,617 main 105886 127040217740800 Chunk 1 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,625 main 105886 127040217740800 Chunk 1 upload successful
+INFO 2025-06-03 08:04:55,639 main 105886 127040217740800 Uploading chunk 2/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,639 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,640 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,642 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,643 main 105886 127040217740800 Chunk 2 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,650 main 105886 127040217740800 Chunk 2 upload successful
+INFO 2025-06-03 08:04:55,661 main 105886 127040217740800 Uploading chunk 3/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,661 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,662 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,664 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,665 main 105886 127040217740800 Chunk 3 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,673 main 105886 127040217740800 Chunk 3 upload successful
+INFO 2025-06-03 08:04:55,683 main 105886 127040217740800 Uploading chunk 4/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,683 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,684 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,686 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,687 main 105886 127040217740800 Chunk 4 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,694 main 105886 127040217740800 Chunk 4 upload successful
+INFO 2025-06-03 08:04:55,705 main 105886 127040217740800 Uploading chunk 5/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,705 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,707 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,709 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,710 main 105886 127040217740800 Chunk 5 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,718 main 105886 127040217740800 Chunk 5 upload successful
+INFO 2025-06-03 08:04:55,727 main 105886 127040217740800 Uploading chunk 6/7 for file 12q.mp4
+INFO 2025-06-03 08:04:55,728 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 2c08546a-75ea-4a3b-b083-694d474da3a5, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,729 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,730 main 105886 127040217740800 Folder found: videos
+INFO 2025-06-03 08:04:55,731 main 105886 127040217740800 Chunk 6 written: 926582 bytes
+INFO 2025-06-03 08:04:55,741 main 105886 127040217740800 Chunk 6 upload successful
+INFO 2025-06-03 08:04:55,831 main 105886 127040217740800 Successfully merged file: 12q.mp4 (7218038 bytes) in project ABC
+INFO 2025-06-03 08:04:55,880 main 105886 127040217740800 Uploading chunk 0/1 for file DJI_0356_W_0001.jpg
+INFO 2025-06-03 08:04:55,880 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 1d8f1a50-bcda-40e2-a40b-809d1d5b569a, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,882 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,885 main 105886 127040217740800 Folder found: VD
+INFO 2025-06-03 08:04:55,886 main 105886 127040217740800 Chunk 0 written: 503553 bytes
+INFO 2025-06-03 08:04:55,894 main 105886 127040217740800 Chunk 0 upload successful
+INFO 2025-06-03 08:04:55,922 main 105886 127040217740800 Successfully merged file: DJI_0356_W_0001.jpg (503553 bytes) in project ABC
+INFO 2025-06-03 08:04:55,938 main 105886 127040217740800 Uploading chunk 0/2 for file code.zip
+INFO 2025-06-03 08:04:55,939 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 8dde5c57-19fe-47b6-9c91-3fa39ba7f594, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,940 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,942 main 105886 127040217740800 Folder found: datazip
+INFO 2025-06-03 08:04:55,944 main 105886 127040217740800 Chunk 0 written: 1048576 bytes
+INFO 2025-06-03 08:04:55,952 main 105886 127040217740800 Chunk 0 upload successful
+INFO 2025-06-03 08:04:55,957 main 105886 127040217740800 Uploading chunk 1/2 for file code.zip
+INFO 2025-06-03 08:04:55,957 main 105886 127040217740800 Project: 0a43c21b-bb40-4d83-858a-cb1d237e96d0, Folder: 8dde5c57-19fe-47b6-9c91-3fa39ba7f594, User: 31c1e60f-eeb1-4b2f-b1f9-1a9f48e45338
+INFO 2025-06-03 08:04:55,958 main 105886 127040217740800 Project found: ABC
+INFO 2025-06-03 08:04:55,961 main 105886 127040217740800 Folder found: datazip
+INFO 2025-06-03 08:04:55,962 main 105886 127040217740800 Chunk 1 written: 169862 bytes
+INFO 2025-06-03 08:04:55,969 main 105886 127040217740800 Chunk 1 upload successful
+INFO 2025-06-03 08:04:56,005 main 105886 127040217740800 Successfully merged file: code.zip (1218438 bytes) in project ABC

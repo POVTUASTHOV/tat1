@@ -21,9 +21,10 @@ from fastapi.responses import JSONResponse
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from storage.models import File as DjangoFile, Folder, ChunkedUpload
+from storage.models import File as DjangoFile, Folder, ChunkedUpload, Project
 from pydantic import BaseModel
-import jwt
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import InvalidToken
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ TEMP_CLEANUP_INTERVAL = 1800
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,10 +54,12 @@ class ChunkUploadRequest(BaseModel):
     total_chunks: int
     total_size: int
     chunk_hash: Optional[str] = None
+    project_id: str
     folder_id: Optional[str] = None
 
 class CompleteUploadRequest(BaseModel):
     filename: str
+    project_id: str
     folder_id: Optional[str] = None
 
 @sync_to_async
@@ -68,11 +71,25 @@ def check_user_storage_space(user, total_size):
     return user.has_storage_space(total_size)
 
 @sync_to_async
-def get_folder_by_id(folder_id, user):
-    return Folder.objects.get(id=folder_id, user=user)
+def get_project_by_id(project_id, user):
+    try:
+        project = Project.objects.get(id=project_id, user=user)
+        return project
+    except Project.DoesNotExist:
+        raise Exception("Project not found")
 
 @sync_to_async
-def create_chunked_upload_record(temp_file_path, filename, content_type, chunk_number, total_chunks, total_size, user, folder):
+def get_folder_by_id(folder_id, user):
+    try:
+        folder = Folder.objects.select_related('project').get(id=folder_id)
+        if folder.user != user:
+            raise Exception("Folder does not belong to user")
+        return folder
+    except Folder.DoesNotExist:
+        raise Exception("Folder not found")
+
+@sync_to_async
+def create_chunked_upload_record(temp_file_path, filename, content_type, chunk_number, total_chunks, total_size, user, project, folder):
     return ChunkedUpload.objects.create(
         file=temp_file_path,
         filename=filename,
@@ -81,16 +98,18 @@ def create_chunked_upload_record(temp_file_path, filename, content_type, chunk_n
         total_chunks=total_chunks,
         total_size=total_size,
         user=user,
+        project=project,
         folder=folder
     )
 
 @sync_to_async
-def create_final_file(name, content_type, size, user, folder, file_path):
+def create_final_file(name, content_type, size, user, project, folder, file_path):
     file_obj = DjangoFile(
         name=name,
         content_type=content_type,
         size=size,
         user=user,
+        project=project,
         folder=folder
     )
     file_obj.file.name = file_path
@@ -98,18 +117,8 @@ def create_final_file(name, content_type, size, user, folder, file_path):
     return file_obj
 
 @sync_to_async
-def get_chunks_for_user(user, filename):
-    return list(ChunkedUpload.objects.filter(user=user, filename=filename).order_by('chunk_number'))
-
-@sync_to_async
-def create_django_file(name, content_type, size, user, folder):
-    return DjangoFile.objects.create(
-        name=name,
-        content_type=content_type,
-        size=size,
-        user=user,
-        folder=folder
-    )
+def get_chunks_for_upload(user, project, filename):
+    return list(ChunkedUpload.objects.filter(user=user, project=project, filename=filename).order_by('chunk_number'))
 
 @sync_to_async
 def update_user_storage(user, size):
@@ -120,27 +129,29 @@ def delete_chunk(chunk):
     chunk.delete()
 
 @sync_to_async
-def filter_chunks_by_user_and_filename(user, filename):
-    return ChunkedUpload.objects.filter(user=user, filename=filename)
+def filter_chunks_by_upload(user, project, filename):
+    return ChunkedUpload.objects.filter(user=user, project=project, filename=filename)
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     try:
-        scheme, token = authorization.split()
+        scheme, token = authorization.split(" ", 1)
         if scheme.lower() != 'bearer':
             raise HTTPException(status_code=401, detail="Invalid authentication scheme")
         
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
+        access_token = AccessToken(token)
+        user_id = access_token.payload.get("user_id")
         
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         user = await get_user_by_id(user_id)
         return user
-    except (jwt.PyJWTError, Exception) as e:
+    except InvalidToken:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
         logger.error(f"Authentication error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -161,8 +172,8 @@ async def cleanup_temp_files():
                 except OSError:
                     pass
 
-def get_upload_key(user_id: str, filename: str) -> str:
-    return f"{user_id}_{filename}"
+def get_upload_key(user_id: str, project_id: str, filename: str) -> str:
+    return f"{user_id}_{project_id}_{filename}"
 
 @router.post("/upload/chunk/")
 async def upload_chunk(
@@ -172,26 +183,43 @@ async def upload_chunk(
     chunk_number: int = Form(...),
     total_chunks: int = Form(...),
     total_size: int = Form(...),
+    project_id: str = Form(...),
     folder_id: Optional[str] = Form(None),
     current_user = Depends(get_current_user)
 ):
     try:
         logger.info(f"Uploading chunk {chunk_number}/{total_chunks} for file {filename}")
+        logger.info(f"Project: {project_id}, Folder: {folder_id}, User: {current_user.id}")
         
+        if folder_id == "":
+            folder_id = None
+            
         if not await check_user_storage_space(current_user, total_size):
             raise HTTPException(status_code=400, detail="Not enough storage space")
+        
+        try:
+            project = await get_project_by_id(project_id, current_user)
+            logger.info(f"Project found: {project.name}")
+        except Exception as e:
+            logger.error(f"Project not found: {str(e)}")
+            raise HTTPException(status_code=404, detail=f"Project not found: {str(e)}")
         
         folder = None
         if folder_id:
             try:
                 folder = await get_folder_by_id(folder_id, current_user)
-            except Exception:
-                raise HTTPException(status_code=404, detail="Folder not found")
+                logger.info(f"Folder found: {folder.name}")
+                if str(folder.project.id) != project_id:
+                    logger.error(f"Folder project mismatch: {folder.project.id} != {project_id}")
+                    raise HTTPException(status_code=400, detail="Folder does not belong to specified project")
+            except Exception as e:
+                logger.error(f"Folder not found: {str(e)}")
+                raise HTTPException(status_code=404, detail=f"Folder not found: {str(e)}")
         
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'uploads', 'chunks')
         os.makedirs(temp_dir, exist_ok=True)
         
-        upload_key = get_upload_key(str(current_user.id), filename)
+        upload_key = get_upload_key(str(current_user.id), project_id, filename)
         chunk_filename = f"{upload_key}_chunk_{chunk_number:06d}"
         temp_file_path = os.path.join(temp_dir, chunk_filename)
         
@@ -211,6 +239,7 @@ async def upload_chunk(
                 'chunks_received': set(),
                 'total_chunks': total_chunks,
                 'total_size': total_size,
+                'project_id': project_id,
                 'folder_id': folder_id,
                 'user_id': str(current_user.id),
                 'filename': filename
@@ -226,6 +255,7 @@ async def upload_chunk(
             total_chunks,
             total_size,
             current_user,
+            project,
             folder
         )
         
@@ -238,7 +268,9 @@ async def upload_chunk(
             "chunk_id": str(chunk_record.id),
             "chunks_received": chunks_received,
             "total_chunks": total_chunks,
-            "bytes_written": bytes_written
+            "bytes_written": bytes_written,
+            "project_id": project_id,
+            "folder_id": folder_id
         }
         
         if is_complete:
@@ -248,6 +280,8 @@ async def upload_chunk(
         logger.info(f"Chunk {chunk_number} upload successful")
         return JSONResponse(content=response)
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error uploading chunk {chunk_number}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error uploading chunk: {str(e)}")
@@ -260,17 +294,25 @@ async def complete_upload(
 ):
     try:
         filename = data.filename
+        project_id = data.project_id
         folder_id = data.folder_id
-        upload_key = get_upload_key(str(current_user.id), filename)
+        upload_key = get_upload_key(str(current_user.id), project_id, filename)
+        
+        try:
+            project = await get_project_by_id(project_id, current_user)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Project not found")
         
         folder = None
         if folder_id:
             try:
                 folder = await get_folder_by_id(folder_id, current_user)
+                if str(folder.project.id) != project_id:
+                    raise HTTPException(status_code=400, detail="Folder does not belong to specified project")
             except Exception:
                 raise HTTPException(status_code=404, detail="Folder not found")
         
-        chunks = await get_chunks_for_user(current_user, filename)
+        chunks = await get_chunks_for_upload(current_user, project, filename)
         
         if not chunks:
             raise HTTPException(status_code=400, detail="No chunks found")
@@ -294,7 +336,7 @@ async def complete_upload(
         try:
             with open(merged_file_path, 'wb') as merged_file:
                 for chunk in chunks:
-                    chunk_path = chunk.file.path
+                    chunk_path = chunk.file
                     if not os.path.exists(chunk_path):
                         raise HTTPException(status_code=500, detail=f"Chunk file missing: {chunk.chunk_number}")
                     
@@ -306,12 +348,19 @@ async def complete_upload(
                             merged_file.write(buffer)
                             total_bytes_written += len(buffer)
             
-            final_file_path = f"user_{current_user.id}/{filename}"
+            project_name = project.name.replace(' ', '_').lower()
+            if folder:
+                folder_path = folder.path.replace(' ', '_').lower()
+                final_file_path = f"user_{current_user.id}/{project_name}/{folder_path}/{filename}"
+            else:
+                final_file_path = f"user_{current_user.id}/{project_name}/{filename}"
+            
             file_obj = await create_final_file(
                 filename,
                 chunks[0].content_type,
                 total_bytes_written,
                 current_user,
+                project,
                 folder,
                 final_file_path
             )
@@ -325,7 +374,7 @@ async def complete_upload(
             await update_user_storage(current_user, file_obj.size)
             
             for chunk in chunks:
-                chunk_path = chunk.file.path
+                chunk_path = chunk.file
                 if os.path.exists(chunk_path):
                     os.remove(chunk_path)
                 await delete_chunk(chunk)
@@ -333,16 +382,20 @@ async def complete_upload(
             if upload_key in active_uploads:
                 del active_uploads[upload_key]
             
-            logger.info(f"Successfully merged file: {filename} ({total_bytes_written} bytes)")
+            logger.info(f"Successfully merged file: {filename} ({total_bytes_written} bytes) in project {project.name}")
             
             return JSONResponse(content={
                 "id": str(file_obj.id),
                 "name": file_obj.name,
                 "size": file_obj.size,
                 "content_type": file_obj.content_type,
+                "project": str(project.id),
+                "project_name": project.name,
                 "folder": str(folder.id) if folder else None,
+                "folder_name": folder.name if folder else None,
                 "uploaded_at": str(file_obj.uploaded_at),
-                "total_bytes": total_bytes_written
+                "total_bytes": total_bytes_written,
+                "file_path": file_obj.get_file_path()
             })
         
         except Exception as e:
@@ -354,22 +407,30 @@ async def complete_upload(
         logger.error(f"Error completing upload: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error completing upload: {str(e)}")
 
-@router.get("/upload/status/{filename}")
+@router.get("/upload/status/{project_id}/{filename}")
 async def get_upload_status(
+    project_id: str,
     filename: str,
     current_user = Depends(get_current_user)
 ):
-    upload_key = get_upload_key(str(current_user.id), filename)
+    upload_key = get_upload_key(str(current_user.id), project_id, filename)
+    
+    try:
+        project = await get_project_by_id(project_id, current_user)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Project not found")
     
     if upload_key not in active_uploads:
-        chunks = await filter_chunks_by_user_and_filename(current_user, filename)
+        chunks = await filter_chunks_by_upload(current_user, project, filename)
         if not chunks:
             raise HTTPException(status_code=404, detail="Upload not found")
         
         return JSONResponse(content={
             "status": "unknown",
             "chunks_received": len(chunks),
-            "total_chunks": chunks[0].total_chunks if chunks else 0
+            "total_chunks": chunks[0].total_chunks if chunks else 0,
+            "project_id": project_id,
+            "filename": filename
         })
     
     upload_info = active_uploads[upload_key]
@@ -377,26 +438,38 @@ async def get_upload_status(
         "status": "in_progress",
         "chunks_received": len(upload_info['chunks_received']),
         "total_chunks": upload_info['total_chunks'],
-        "progress_percent": (len(upload_info['chunks_received']) / upload_info['total_chunks']) * 100
+        "progress_percent": (len(upload_info['chunks_received']) / upload_info['total_chunks']) * 100,
+        "project_id": project_id,
+        "filename": filename
     })
 
-@router.delete("/upload/cancel/{filename}")
+@router.delete("/upload/cancel/{project_id}/{filename}")
 async def cancel_upload(
+    project_id: str,
     filename: str,
     current_user = Depends(get_current_user)
 ):
-    upload_key = get_upload_key(str(current_user.id), filename)
+    upload_key = get_upload_key(str(current_user.id), project_id, filename)
     
-    chunks = await get_chunks_for_user(current_user, filename)
+    try:
+        project = await get_project_by_id(project_id, current_user)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    chunks = await get_chunks_for_upload(current_user, project, filename)
     for chunk in chunks:
-        if os.path.exists(chunk.file.path):
-            os.remove(chunk.file.path)
+        if os.path.exists(chunk.file):
+            os.remove(chunk.file)
         await delete_chunk(chunk)
     
     if upload_key in active_uploads:
         del active_uploads[upload_key]
     
-    return JSONResponse(content={"message": "Upload cancelled successfully"})
+    return JSONResponse(content={
+        "message": "Upload cancelled successfully",
+        "project_id": project_id,
+        "filename": filename
+    })
 
 app.include_router(router, prefix="/api")
 

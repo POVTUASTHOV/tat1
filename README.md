@@ -1,2 +1,11 @@
-# data_management_V2
-V2
+# Data Management Project
+
+## Backend
+Backend API server
+
+## Frontend  
+Frontend application (Next.js)
+
+### Frontend Structure
+- `src/` - Source code
+- `package.json` - Dependencies
