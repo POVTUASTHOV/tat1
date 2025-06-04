@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
+import { apiService } from '../lib/api';
 
 interface AuthState {
   user: User | null;
@@ -14,31 +15,46 @@ interface AuthState {
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
+  initializeAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
       isLoading: false,
       
-      setAuth: (user, token) => set({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-      }),
+      setAuth: (user, token) => {
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+        apiService.setToken(token);
+      },
       
-      clearAuth: () => set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      }),
+      clearAuth: () => {
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+        apiService.clearToken();
+      },
       
       setLoading: (loading) => set({ isLoading: loading }),
+      
+      initializeAuth: () => {
+        const state = get();
+        if (state.token && state.user) {
+          apiService.setToken(state.token);
+          set({ isAuthenticated: true });
+        }
+      },
     }),
     {
       name: 'auth-storage',

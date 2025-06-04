@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { HardDrive, FileText, Folder, Upload } from 'lucide-react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
 import { apiService } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { StorageStats } from '../../types';
@@ -30,166 +29,162 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Welcome Section */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {user?.username}!
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Here's an overview of your storage and files.
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Welcome back, {user?.username}!
+        </h1>
+        <p className="text-gray-600 mt-1">
+          Here's an overview of your storage and files.
+        </p>
+      </div>
 
-        {/* Stats Cards */}
-        {storageStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Storage Used */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <HardDrive className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Storage Used</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {storageStats.storage.used_formatted}
-                  </p>
-                </div>
+      {/* Stats Cards */}
+      {storageStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Storage Used */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <HardDrive className="w-6 h-6 text-blue-600" />
               </div>
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">
-                    {storageStats.storage.percentage.toFixed(1)}% used
-                  </span>
-                  <span className="text-gray-600">
-                    {storageStats.storage.quota_formatted} total
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(storageStats.storage.percentage, 100)}%` }}
-                  ></div>
-                </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Storage Used</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {storageStats.storage.used_formatted}
+                </p>
               </div>
             </div>
-
-            {/* Total Files */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <FileText className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Files</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {storageStats.overview.total_files.toLocaleString()}
-                  </p>
-                </div>
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">
+                  {storageStats.storage.percentage.toFixed(1)}% used
+                </span>
+                <span className="text-gray-600">
+                  {storageStats.storage.quota_formatted} total
+                </span>
               </div>
-            </div>
-
-            {/* Total Folders */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="bg-yellow-100 p-3 rounded-lg">
-                  <Folder className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Folders</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {storageStats.overview.total_folders.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Total Projects */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Upload className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Projects</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {storageStats.overview.total_projects.toLocaleString()}
-                  </p>
-                </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(storageStats.storage.percentage, 100)}%` }}
+                ></div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Recent Projects */}
-        {storageStats?.projects && storageStats.projects.length > 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Projects</h2>
+          {/* Total Files */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="bg-green-100 p-3 rounded-lg">
+                <FileText className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Files</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {storageStats.overview.total_files.toLocaleString()}
+                </p>
+              </div>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {storageStats.projects.slice(0, 5).map((project) => (
-                  <div key={project.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-blue-100 p-2 rounded-lg">
-                        <Folder className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">{project.name}</h3>
-                        <p className="text-sm text-gray-500">{project.description || 'No description'}</p>
-                      </div>
+          </div>
+
+          {/* Total Folders */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="bg-yellow-100 p-3 rounded-lg">
+                <Folder className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Folders</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {storageStats.overview.total_folders.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Projects */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="bg-purple-100 p-3 rounded-lg">
+                <Upload className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Projects</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {storageStats.overview.total_projects.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Projects */}
+      {storageStats?.projects && storageStats.projects.length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Projects</h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {storageStats.projects.slice(0, 5).map((project) => (
+                <div key={project.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-100 p-2 rounded-lg">
+                      <Folder className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        {project.files_count} files
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {project.total_size_formatted}
-                      </p>
+                    <div>
+                      <h3 className="font-medium text-gray-900">{project.name}</h3>
+                      <p className="text-sm text-gray-500">{project.description || 'No description'}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* File Type Breakdown */}
-        {storageStats?.overview.file_types && Object.keys(storageStats.overview.file_types).length > 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">File Types</h2>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(storageStats.overview.file_types).map(([type, data]) => (
-                  <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900 capitalize">{type}</p>
-                      <p className="text-sm text-gray-500">{data.count} files</p>
-                    </div>
-                    <p className="text-sm font-medium text-gray-700">
-                      {formatFileSize(data.size)}
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.files_count} files
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {project.total_size_formatted}
                     </p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
-        )}
-      </div>
-    </DashboardLayout>
+        </div>
+      )}
+
+      {/* File Type Breakdown */}
+      {storageStats?.overview.file_types && Object.keys(storageStats.overview.file_types).length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">File Types</h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(storageStats.overview.file_types).map(([type, data]) => (
+                <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900 capitalize">{type}</p>
+                    <p className="text-sm text-gray-500">{data.count} files</p>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700">
+                    {formatFileSize(data.size)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

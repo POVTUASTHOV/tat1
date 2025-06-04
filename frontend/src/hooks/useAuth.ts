@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../stores/authStore';
 import { apiService } from '../lib/api';
@@ -7,7 +8,21 @@ import { LoginCredentials } from '../types';
 
 export const useAuth = () => {
   const router = useRouter();
-  const { user, token, isAuthenticated, isLoading, setAuth, clearAuth, setLoading } = useAuthStore();
+  const { 
+    user, 
+    token, 
+    isAuthenticated, 
+    isLoading, 
+    setAuth, 
+    clearAuth, 
+    setLoading,
+    initializeAuth 
+  } = useAuthStore();
+
+  // Initialize auth state when hook is first used
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   const login = async (credentials: LoginCredentials) => {
     try {
@@ -15,7 +30,6 @@ export const useAuth = () => {
       const response = await apiService.login(credentials);
       
       setAuth(response.user, response.access);
-      apiService.setToken(response.access);
       
       router.push('/dashboard');
       return { success: true };
@@ -39,7 +53,6 @@ export const useAuth = () => {
       console.error('Logout error:', error);
     } finally {
       clearAuth();
-      apiService.clearToken();
       router.push('/login');
     }
   };
