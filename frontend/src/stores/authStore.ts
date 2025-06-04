@@ -1,68 +1,74 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { User } from '../types';
-import { apiService } from '../lib/api';
 
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   
-  // Actions
-  setAuth: (user: User, token: string) => void;
+  setAuth: (user: User, token: string, refreshToken: string) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
   initializeAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  token: null,
+  refreshToken: null,
+  isAuthenticated: false,
+  isLoading: false,
+  
+  setAuth: (user, token, refreshToken) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    set({
+      user,
+      token,
+      refreshToken,
+      isAuthenticated: true,
+      isLoading: false,
+    });
+  },
+  
+  clearAuth: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+    }
+    set({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+    });
+  },
+  
+  setLoading: (loading) => set({ isLoading: loading }),
+  
+  initializeAuth: () => {
+    if (typeof window !== 'undefined') {
+      const user = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      const refreshToken = localStorage.getItem('refreshToken');
       
-      setAuth: (user, token) => {
+      if (user && token && refreshToken) {
         set({
-          user,
+          user: JSON.parse(user),
           token,
+          refreshToken,
           isAuthenticated: true,
-          isLoading: false,
         });
-        apiService.setToken(token);
-      },
-      
-      clearAuth: () => {
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-        apiService.clearToken();
-      },
-      
-      setLoading: (loading) => set({ isLoading: loading }),
-      
-      initializeAuth: () => {
-        const state = get();
-        if (state.token && state.user) {
-          apiService.setToken(state.token);
-          set({ isAuthenticated: true });
-        }
-      },
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      }
     }
-  )
-);
+  },
+}));

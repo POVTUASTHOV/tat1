@@ -3,74 +3,130 @@ import { LoginCredentials, LoginResponse, StorageStats, Project, FileItem } from
 
 class ApiService {
   private token: string | null = null;
+  private refreshToken: string | null = null;
+  private isRefreshing: boolean = false;
 
   constructor() {
-    // Load token from localStorage on initialization
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('token');
+      this.refreshToken = localStorage.getItem('refreshToken');
     }
   }
 
-  setToken(token: string) {
-    this.token = token;
+  setTokens(accessToken: string, refreshToken: string) {
+    this.token = accessToken;
+    this.refreshToken = refreshToken;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
     }
   }
 
-  clearToken() {
+  clearTokens() {
     this.token = null;
+    this.refreshToken = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+    }
+  }
+
+  private handleAuthError() {
+    this.clearTokens();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  }
+
+  private async refreshAccessToken(): Promise<string> {
+    if (!this.refreshToken || this.isRefreshing) {
+      throw new Error('No refresh token available or already refreshing');
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.REFRESH}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh: this.refreshToken }),
+      });
+
+      if (!response.ok) {
+        this.handleAuthError();
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+      this.setTokens(data.access, this.refreshToken!);
+      return data.access;
+    } finally {
+      this.isRefreshing = false;
     }
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.token && { Authorization: `Bearer ${this.token}` }),
-        ...options.headers,
-      },
-      ...options,
+    const makeRequest = async (accessToken: string | null) => {
+      const config: RequestInit = {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+          ...options.headers,
+        },
+        ...options,
+      };
+
+      return fetch(`${API_BASE_URL}${endpoint}`, config);
     };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
+    let response = await makeRequest(this.token);
+
+    if (response.status === 401 && this.refreshToken && !this.isRefreshing) {
+      try {
+        const newToken = await this.refreshAccessToken();
+        response = await makeRequest(newToken);
+      } catch (error) {
+        this.handleAuthError();
+        throw error;
+      }
+    }
+
     if (!response.ok) {
       const errorText = await response.text();
+      
+      if (response.status === 401) {
+        this.handleAuthError();
+      }
+      
       throw new Error(`API Error: ${response.status} - ${errorText}`);
     }
 
     return response.json();
   }
 
-  // Auth Methods
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const response = await this.request<LoginResponse>(API_ENDPOINTS.LOGIN, {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
     
-    // Automatically set token after successful login
-    this.setToken(response.access);
-    
+    this.setTokens(response.access, response.refresh);
     return response;
   }
 
   async logout(refreshToken: string): Promise<void> {
     try {
-      return this.request<void>(API_ENDPOINTS.LOGOUT, {
+      await this.request<void>(API_ENDPOINTS.LOGOUT, {
         method: 'POST',
         body: JSON.stringify({ refresh: refreshToken }),
       });
     } catch (error) {
-      // Ignore logout errors - we'll clear local state anyway
       console.warn('Logout API call failed:', error);
     }
   }
 
-  // Storage & File Methods
   async getStorageStats(): Promise<StorageStats> {
     return this.request<StorageStats>(API_ENDPOINTS.STORAGE_STATS);
   }
@@ -99,7 +155,6 @@ class ApiService {
     return this.request<{ files: FileItem[]; total: number }>(url);
   }
 
-  // Projects
   async createProject(data: { name: string; description?: string }): Promise<Project> {
     return this.request<Project>(API_ENDPOINTS.PROJECTS, {
       method: 'POST',
@@ -120,13 +175,37 @@ class ApiService {
     });
   }
 
-  // File Operations
   async downloadFile(fileId: string): Promise<Blob> {
     const response = await fetch(`${API_BASE_URL}/file-management/files/${fileId}/download/`, {
       headers: {
         ...(this.token && { Authorization: `Bearer ${this.token}` }),
       },
     });
+
+    if (response.status === 401) {
+      if (this.refreshToken && !this.isRefreshing) {
+        try {
+          const newToken = await this.refreshAccessToken();
+          const retryResponse = await fetch(`${API_BASE_URL}/file-management/files/${fileId}/download/`, {
+            headers: {
+              Authorization: `Bearer ${newToken}`,
+            },
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error('Download failed');
+          }
+          
+          return retryResponse.blob();
+        } catch (error) {
+          this.handleAuthError();
+          throw error;
+        }
+      } else {
+        this.handleAuthError();
+        throw new Error('Authentication failed');
+      }
+    }
 
     if (!response.ok) {
       throw new Error('Download failed');
@@ -148,7 +227,6 @@ class ApiService {
     });
   }
 
-  // Folders
   async createFolder(data: { name: string; parent?: string; project: string }): Promise<any> {
     return this.request<any>(`${API_ENDPOINTS.PROJECTS}${data.project}/create_folder/`, {
       method: 'POST',
@@ -162,7 +240,6 @@ class ApiService {
     });
   }
 
-  // Project tree structure
   async getProjectTree(projectId: string): Promise<any> {
     return this.request<any>(`${API_ENDPOINTS.PROJECTS}${projectId}/tree/`);
   }
