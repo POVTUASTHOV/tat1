@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Upload, FolderPlus, Search, Trash2 } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
 import FileActions from '../../../../components/ui/FileActions';
+import FilePreviewModal from '../../../../components/ui/FilePreviewModal';
+import ArchivePreviewModal from '../../../../components/ui/ArchivePreviewModal';
 import { apiService } from '../../../../lib/api';
 import { Project, FileItem } from '../../../../types';
 import { formatFileSize, formatDate } from '../../../../lib/utils';
@@ -18,6 +20,9 @@ export default function ProjectDetailPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showArchivePreview, setShowArchivePreview] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -46,7 +51,10 @@ export default function ProjectDetailPage() {
     file.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSelectFile = (fileId: string) => {
+  const handleSelectFile = (fileId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
     setSelectedFiles(prev =>
       prev.includes(fileId)
         ? prev.filter(id => id !== fileId)
@@ -89,6 +97,36 @@ export default function ProjectDetailPage() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Failed to download file:', error);
+    }
+  };
+
+  const isPreviewable = (contentType: string) => {
+    return contentType.startsWith('image/') ||
+           contentType.startsWith('video/') ||
+           contentType.startsWith('audio/') ||
+           contentType.startsWith('text/') ||
+           contentType === 'application/json' ||
+           contentType === 'text/csv' ||
+           contentType === 'application/pdf';
+  };
+
+  const isArchive = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    return ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(extension || '');
+  };
+
+  const handleDoubleClick = (file: FileItem, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    setSelectedFile(file);
+    
+    if (isArchive(file.name)) {
+      setShowArchivePreview(true);
+    } else if (isPreviewable(file.content_type)) {
+      setShowPreview(true);
+    } else {
+      handleDownloadFile(file.id, file.name);
     }
   };
 
@@ -230,12 +268,18 @@ export default function ProjectDetailPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredFiles.map((file) => (
-                <tr key={file.id} className="hover:bg-gray-50">
+                <tr 
+                  key={file.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={(e) => handleSelectFile(file.id, e)}
+                  onDoubleClick={(e) => handleDoubleClick(file, e)}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedFiles.includes(file.id)}
-                      onChange={() => handleSelectFile(file.id)}
+                      onChange={() => {}}
+                      onClick={(e) => e.stopPropagation()}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
@@ -253,23 +297,25 @@ export default function ProjectDetailPage() {
                     {formatDate(file.uploaded_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <FileActions
-                      fileId={file.id}
-                      fileName={file.name}
-                      contentType={file.content_type}
-                      onDownload={() => handleDownloadFile(file.id, file.name)}
-                      onDelete={async () => {
-                        if (confirm(`Delete ${file.name}?`)) {
-                          try {
-                            await apiService.deleteFile(file.id);
-                            await loadProjectData();
-                          } catch (error) {
-                            console.error('Failed to delete file:', error);
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <FileActions
+                        fileId={file.id}
+                        fileName={file.name}
+                        contentType={file.content_type}
+                        onDownload={() => handleDownloadFile(file.id, file.name)}
+                        onDelete={async () => {
+                          if (confirm(`Delete ${file.name}?`)) {
+                            try {
+                              await apiService.deleteFile(file.id);
+                              await loadProjectData();
+                            } catch (error) {
+                              console.error('Failed to delete file:', error);
+                            }
                           }
-                        }
-                      }}
-                      onPreviewComplete={loadProjectData}
-                    />
+                        }}
+                        onPreviewComplete={loadProjectData}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -283,6 +329,36 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {showPreview && selectedFile && (
+        <FilePreviewModal
+          isOpen={showPreview}
+          onClose={() => {
+            setShowPreview(false);
+            setSelectedFile(null);
+          }}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          contentType={selectedFile.content_type}
+        />
+      )}
+
+      {showArchivePreview && selectedFile && (
+        <ArchivePreviewModal
+          isOpen={showArchivePreview}
+          onClose={() => {
+            setShowArchivePreview(false);
+            setSelectedFile(null);
+          }}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          onExtractComplete={() => {
+            setShowArchivePreview(false);
+            setSelectedFile(null);
+            loadProjectData();
+          }}
+        />
+      )}
     </div>
   );
 }

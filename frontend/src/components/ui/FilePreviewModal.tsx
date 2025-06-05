@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, Maximize2, Play, Pause, Volume2 } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, Maximize2, Volume2 } from 'lucide-react';
 import Button from './Button';
 
 interface FilePreviewModalProps {

@@ -41,7 +41,10 @@ export default function FilesPage() {
     }
   };
 
-  const handleSelectFile = (fileId: string) => {
+  const handleSelectFile = (fileId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
     setSelectedFiles(prev =>
       prev.includes(fileId)
         ? prev.filter(id => id !== fileId)
@@ -102,7 +105,10 @@ export default function FilesPage() {
     return ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(extension || '');
   };
 
-  const handleDoubleClick = (file: FileItem) => {
+  const handleDoubleClick = (file: FileItem, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
     setSelectedFile(file);
     
     if (isArchive(file.name)) {
@@ -232,13 +238,14 @@ export default function FilesPage() {
                   <tr 
                     key={file.id} 
                     className="hover:bg-gray-50 cursor-pointer"
-                    onDoubleClick={() => handleDoubleClick(file)}
+                    onClick={(e) => handleSelectFile(file.id, e)}
+                    onDoubleClick={(e) => handleDoubleClick(file, e)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedFiles.includes(file.id)}
-                        onChange={() => handleSelectFile(file.id)}
+                        onChange={() => {}}
                         onClick={(e) => e.stopPropagation()}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
@@ -294,8 +301,8 @@ export default function FilesPage() {
                   className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
                     selectedFiles.includes(file.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
                   }`}
-                  onClick={() => handleSelectFile(file.id)}
-                  onDoubleClick={() => handleDoubleClick(file)}
+                  onClick={(e) => handleSelectFile(file.id, e)}
+                  onDoubleClick={(e) => handleDoubleClick(file, e)}
                 >
                   <div className="text-center">
                     <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">

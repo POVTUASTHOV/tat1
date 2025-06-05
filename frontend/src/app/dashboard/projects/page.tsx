@@ -235,15 +235,15 @@ export default function ProjectsPage() {
   };
 
   const handleFileDoubleClick = (file: any) => {
-    setSelectedFile(file);
-    
-    if (isArchive(file.name)) {
+  setSelectedFile(file);
+  
+  if (isArchive(file.name)) {
       setShowArchivePreview(true);
     } else if (isPreviewable(file.content_type)) {
       setShowPreview(true);
     } else {
       handleDownloadFile(file.id, file.name);
-    }
+   }
   };
 
   const getFolderOptions = (projectId: string, excludeFolderId?: string): Array<{ id: string; name: string; level: number }> => {
@@ -321,7 +321,15 @@ export default function ProjectsPage() {
                     key={file.id} 
                     style={{ marginLeft: `${(level + 1) * 20}px` }} 
                     className="flex items-center justify-between py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
-                    onDoubleClick={() => handleFileDoubleClick(file)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDoubleClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleFileDoubleClick(file);
+                    }}
                   >
                     <div className="flex items-center space-x-2">
                       <FileText className="w-3 h-3 text-gray-500" />
@@ -484,7 +492,15 @@ export default function ProjectsPage() {
                           <div 
                             key={file.id} 
                             className="flex items-center justify-between py-1 px-2 ml-6 hover:bg-gray-100 rounded cursor-pointer"
-                            onDoubleClick={() => handleFileDoubleClick(file)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onDoubleClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleFileDoubleClick(file);
+                            }}
                           >
                             <div className="flex items-center space-x-2">
                               <FileText className="w-3 h-3 text-gray-500" />
