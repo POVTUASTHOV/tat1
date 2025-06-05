@@ -21,6 +21,7 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
+    console.log('FilePreviewModal useEffect triggered', { isOpen, fileId });
     if (isOpen && fileId) {
       loadPreview();
     }
@@ -32,24 +33,31 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
   }, [isOpen, fileId]);
 
   const loadPreview = async () => {
+    console.log('Loading preview for file:', fileId);
     setIsLoading(true);
     setError('');
     
     try {
       const token = localStorage.getItem('token');
+      console.log('Making preview request to:', `http://localhost:8000/media-preview/preview/${fileId}/preview/`);
+      
       const response = await fetch(`http://localhost:8000/media-preview/preview/${fileId}/preview/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
+      console.log('Preview response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to load preview');
+        throw new Error(`Preview failed with status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Preview data received:', data);
       setPreviewData(data);
     } catch (error) {
+      console.error('Preview error:', error);
       setError(error instanceof Error ? error.message : 'Preview failed');
     } finally {
       setIsLoading(false);
@@ -84,6 +92,8 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
+
+  console.log('FilePreviewModal render state:', { isOpen, previewData, isLoading, error });
 
   if (!isOpen) return null;
 
@@ -143,7 +153,10 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
         <div className="flex-1 overflow-hidden">
           {isLoading && (
             <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p>Loading preview...</p>
+              </div>
             </div>
           )}
 
