@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Download, Trash2, Filter, Grid, List } from 'lucide-react';
+import { Search, Trash2, Grid, List } from 'lucide-react';
 import Button from '../../../components/ui/Button';
+import FileActions from '../../../components/ui/FileActions';
+import FilePreviewModal from '../../../components/ui/FilePreviewModal';
+import ArchivePreviewModal from '../../../components/ui/ArchivePreviewModal';
 import { apiService } from '../../../lib/api';
 import { FileItem } from '../../../types';
 import { formatFileSize, formatDate } from '../../../lib/utils';
@@ -15,6 +18,9 @@ export default function FilesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalFiles, setTotalFiles] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showArchivePreview, setShowArchivePreview] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
   const pageSize = 20;
 
@@ -78,6 +84,33 @@ export default function FilesPage() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Failed to download file:', error);
+    }
+  };
+
+  const isPreviewable = (contentType: string) => {
+    return contentType.startsWith('image/') ||
+           contentType.startsWith('video/') ||
+           contentType.startsWith('audio/') ||
+           contentType.startsWith('text/') ||
+           contentType === 'application/json' ||
+           contentType === 'text/csv' ||
+           contentType === 'application/pdf';
+  };
+
+  const isArchive = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    return ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(extension || '');
+  };
+
+  const handleDoubleClick = (file: FileItem) => {
+    setSelectedFile(file);
+    
+    if (isArchive(file.name)) {
+      setShowArchivePreview(true);
+    } else if (isPreviewable(file.content_type)) {
+      setShowPreview(true);
+    } else {
+      handleDownloadFile(file.id, file.name);
     }
   };
 
@@ -196,12 +229,17 @@ export default function FilesPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {files.map((file) => (
-                  <tr key={file.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={file.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onDoubleClick={() => handleDoubleClick(file)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedFiles.includes(file.id)}
                         onChange={() => handleSelectFile(file.id)}
+                        onClick={(e) => e.stopPropagation()}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </td>
@@ -222,99 +260,148 @@ export default function FilesPage() {
                       {formatDate(file.uploaded_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadFile(file.id, file.name)}
-                      >
-                    <Download className="w-4 h-4" />
-                     </Button>
-                   </td>
-                 </tr>
-               ))}
-             </tbody>
-           </table>
-         </div>
-       ) : (
-         <div className="p-6">
-           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-             {files.map((file) => (
-               <div
-                 key={file.id}
-                 className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                   selectedFiles.includes(file.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                 }`}
-                 onClick={() => handleSelectFile(file.id)}
-               >
-                 <div className="text-center">
-                   <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                     <span className="text-xs font-medium text-gray-600">
-                       {file.name.split('.').pop()?.toUpperCase() || 'FILE'}
-                     </span>
-                   </div>
-                   <h3 className="text-sm font-medium text-gray-900 truncate" title={file.name}>
-                     {file.name}
-                   </h3>
-                   <p className="text-xs text-gray-500 mt-1">{file.size_formatted}</p>
-                   <p className="text-xs text-gray-400 mt-1">{file.project_name}</p>
-                   
-                   <div className="flex justify-center mt-3">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         handleDownloadFile(file.id, file.name);
-                       }}
-                     >
-                       <Download className="w-3 h-3" />
-                     </Button>
-                   </div>
-                 </div>
-               </div>
-             ))}
-           </div>
-         </div>
-       )}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <FileActions
+                          fileId={file.id}
+                          fileName={file.name}
+                          contentType={file.content_type}
+                          onDownload={() => handleDownloadFile(file.id, file.name)}
+                          onDelete={async () => {
+                            if (confirm(`Delete ${file.name}?`)) {
+                              try {
+                                await apiService.deleteFile(file.id);
+                                await loadFiles();
+                              } catch (error) {
+                                console.error('Failed to delete file:', error);
+                              }
+                            }
+                          }}
+                          onPreviewComplete={loadFiles}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                    selectedFiles.includes(file.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                  }`}
+                  onClick={() => handleSelectFile(file.id)}
+                  onDoubleClick={() => handleDoubleClick(file)}
+                >
+                  <div className="text-center">
+                    <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <span className="text-xs font-medium text-gray-600">
+                        {file.name.split('.').pop()?.toUpperCase() || 'FILE'}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-medium text-gray-900 truncate" title={file.name}>
+                      {file.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">{file.size_formatted}</p>
+                    <p className="text-xs text-gray-400 mt-1">{file.project_name}</p>
+                    
+                    <div className="flex justify-center mt-3" onClick={(e) => e.stopPropagation()}>
+                      <FileActions
+                        fileId={file.id}
+                        fileName={file.name}
+                        contentType={file.content_type}
+                        onDownload={() => handleDownloadFile(file.id, file.name)}
+                        onDelete={async () => {
+                          if (confirm(`Delete ${file.name}?`)) {
+                            try {
+                              await apiService.deleteFile(file.id);
+                              await loadFiles();
+                            } catch (error) {
+                              console.error('Failed to delete file:', error);
+                            }
+                          }
+                        }}
+                        onPreviewComplete={loadFiles}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-       {files.length === 0 && !isLoading && (
-         <div className="text-center py-12">
-           <div className="text-gray-500">
-             {searchTerm ? 'No files found matching your search' : 'No files found'}
-           </div>
-         </div>
-       )}
+        {files.length === 0 && !isLoading && (
+          <div className="text-center py-12">
+            <div className="text-gray-500">
+              {searchTerm ? 'No files found matching your search' : 'No files found'}
+            </div>
+          </div>
+        )}
 
-       {/* Pagination */}
-       {totalPages > 1 && (
-         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-           <div className="text-sm text-gray-500">
-             Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalFiles)} of {totalFiles} files
-           </div>
-           <div className="flex space-x-2">
-             <Button
-               variant="outline"
-               size="sm"
-               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-               disabled={currentPage === 1}
-             >
-               Previous
-             </Button>
-             <span className="px-3 py-1 text-sm text-gray-700">
-               Page {currentPage} of {totalPages}
-             </span>
-             <Button
-               variant="outline"
-               size="sm"
-               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-               disabled={currentPage === totalPages}
-             >
-               Next
-             </Button>
-           </div>
-         </div>
-       )}
-     </div>
-   </div>
- );
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalFiles)} of {totalFiles} files
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1 text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showPreview && selectedFile && (
+        <FilePreviewModal
+          isOpen={showPreview}
+          onClose={() => {
+            setShowPreview(false);
+            setSelectedFile(null);
+          }}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          contentType={selectedFile.content_type}
+        />
+      )}
+
+      {showArchivePreview && selectedFile && (
+        <ArchivePreviewModal
+          isOpen={showArchivePreview}
+          onClose={() => {
+            setShowArchivePreview(false);
+            setSelectedFile(null);
+          }}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          onExtractComplete={() => {
+            setShowArchivePreview(false);
+            setSelectedFile(null);
+            loadFiles();
+          }}
+        />
+      )}
+    </div>
+  );
 }

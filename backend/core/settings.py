@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'users',
     'storage',
     'file_management',
+    'media_preview',
 ]
 
 MIDDLEWARE = [
@@ -170,6 +171,11 @@ LOGGING = {
     },
     'loggers': {
         'fastapi_app.main': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'media_preview': {
             'handlers': ['file', 'console'],
             'level': 'INFO',
             'propagate': True,

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Upload, FolderPlus, Search, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, FolderPlus, Search, Trash2 } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
+import FileActions from '../../../../components/ui/FileActions';
 import { apiService } from '../../../../lib/api';
 import { Project, FileItem } from '../../../../types';
 import { formatFileSize, formatDate } from '../../../../lib/utils';
@@ -252,13 +253,23 @@ export default function ProjectDetailPage() {
                     {formatDate(file.uploaded_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadFile(file.id, file.name)}
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
+                    <FileActions
+                      fileId={file.id}
+                      fileName={file.name}
+                      contentType={file.content_type}
+                      onDownload={() => handleDownloadFile(file.id, file.name)}
+                      onDelete={async () => {
+                        if (confirm(`Delete ${file.name}?`)) {
+                          try {
+                            await apiService.deleteFile(file.id);
+                            await loadProjectData();
+                          } catch (error) {
+                            console.error('Failed to delete file:', error);
+                          }
+                        }
+                      }}
+                      onPreviewComplete={loadProjectData}
+                    />
                   </td>
                 </tr>
               ))}

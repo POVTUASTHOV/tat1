@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, FolderOpen, FileText, MoreVertical, Edit, Trash2, ChevronRight, ChevronDown, Upload, FolderPlus } from 'lucide-react';
 import Button from '../../../components/ui/Button';
+import FileActions from '../../../components/ui/FileActions';
+import FilePreviewModal from '../../../components/ui/FilePreviewModal';
+import ArchivePreviewModal from '../../../components/ui/ArchivePreviewModal';
 import UploadModal from '../../../components/ui/UploadModal';
 import { apiService } from '../../../lib/api';
 import { Project } from '../../../types';
@@ -39,6 +42,9 @@ export default function ProjectsPage() {
     folderId?: string;
     folderName?: string;
   } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showArchivePreview, setShowArchivePreview] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
 
   useEffect(() => {
     loadProjects();
@@ -186,6 +192,60 @@ export default function ProjectsPage() {
     loadProjects();
   };
 
+  const handleDownloadFile = async (fileId: string, fileName: string) => {
+    try {
+      const blob = await apiService.downloadFile(fileId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to download file:', error);
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string, fileName: string) => {
+    if (confirm(`Delete ${fileName}?`)) {
+      try {
+        await apiService.deleteFile(fileId);
+        await loadProjects();
+      } catch (error) {
+        console.error('Failed to delete file:', error);
+      }
+    }
+  };
+
+  const isPreviewable = (contentType: string) => {
+    return contentType.startsWith('image/') ||
+           contentType.startsWith('video/') ||
+           contentType.startsWith('audio/') ||
+           contentType.startsWith('text/') ||
+           contentType === 'application/json' ||
+           contentType === 'text/csv' ||
+           contentType === 'application/pdf';
+  };
+
+  const isArchive = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    return ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(extension || '');
+  };
+
+  const handleFileDoubleClick = (file: any) => {
+    setSelectedFile(file);
+    
+    if (isArchive(file.name)) {
+      setShowArchivePreview(true);
+    } else if (isPreviewable(file.content_type)) {
+      setShowPreview(true);
+    } else {
+      handleDownloadFile(file.id, file.name);
+    }
+  };
+
   const getFolderOptions = (projectId: string, excludeFolderId?: string): Array<{ id: string; name: string; level: number }> => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return [];
@@ -257,10 +317,27 @@ export default function ProjectsPage() {
             {folder.files.length > 0 && (
               <div className="ml-4">
                 {folder.files.map(file => (
-                  <div key={file.id} style={{ marginLeft: `${(level + 1) * 20}px` }} className="flex items-center py-1 px-2">
-                    <FileText className="w-3 h-3 text-gray-500 mr-2" />
-                    <span className="text-xs text-gray-700">{file.name}</span>
-                    <span className="text-xs text-gray-400 ml-2">({formatFileSize(file.size)})</span>
+                  <div 
+                    key={file.id} 
+                    style={{ marginLeft: `${(level + 1) * 20}px` }} 
+                    className="flex items-center justify-between py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
+                    onDoubleClick={() => handleFileDoubleClick(file)}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-3 h-3 text-gray-500" />
+                      <span className="text-xs text-gray-700">{file.name}</span>
+                      <span className="text-xs text-gray-400">({formatFileSize(file.size)})</span>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <FileActions
+                        fileId={file.id}
+                        fileName={file.name}
+                        contentType={file.content_type}
+                        onDownload={() => handleDownloadFile(file.id, file.name)}
+                        onDelete={() => handleDeleteFile(file.id, file.name)}
+                        onPreviewComplete={loadProjects}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -404,10 +481,26 @@ export default function ProjectsPage() {
                       <div className="text-sm font-medium text-gray-700 mb-2">Root Files:</div>
                       <div className="space-y-1">
                         {project.rootFiles.map(file => (
-                          <div key={file.id} className="flex items-center py-1 px-2 ml-6">
-                            <FileText className="w-3 h-3 text-gray-500 mr-2" />
-                            <span className="text-xs text-gray-700">{file.name}</span>
-                            <span className="text-xs text-gray-400 ml-2">({formatFileSize(file.size)})</span>
+                          <div 
+                            key={file.id} 
+                            className="flex items-center justify-between py-1 px-2 ml-6 hover:bg-gray-100 rounded cursor-pointer"
+                            onDoubleClick={() => handleFileDoubleClick(file)}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <FileText className="w-3 h-3 text-gray-500" />
+                              <span className="text-xs text-gray-700">{file.name}</span>
+                              <span className="text-xs text-gray-400">({formatFileSize(file.size)})</span>
+                            </div>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <FileActions
+                                fileId={file.id}
+                                fileName={file.name}
+                                contentType={file.content_type}
+                                onDownload={() => handleDownloadFile(file.id, file.name)}
+                                onDelete={() => handleDeleteFile(file.id, file.name)}
+                                onPreviewComplete={loadProjects}
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -492,6 +585,36 @@ export default function ProjectsPage() {
           folderId={uploadTarget.folderId}
           folderName={uploadTarget.folderName}
           onUploadComplete={handleUploadComplete}
+        />
+      )}
+
+      {showPreview && selectedFile && (
+        <FilePreviewModal
+          isOpen={showPreview}
+          onClose={() => {
+            setShowPreview(false);
+            setSelectedFile(null);
+          }}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          contentType={selectedFile.content_type}
+        />
+      )}
+
+      {showArchivePreview && selectedFile && (
+        <ArchivePreviewModal
+          isOpen={showArchivePreview}
+          onClose={() => {
+            setShowArchivePreview(false);
+            setSelectedFile(null);
+          }}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          onExtractComplete={() => {
+            setShowArchivePreview(false);
+            setSelectedFile(null);
+            loadProjects();
+          }}
         />
       )}
     </div>
