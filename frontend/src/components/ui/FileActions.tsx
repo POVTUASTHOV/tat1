@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Download, Trash2 } from 'lucide-react';
 import Button from './Button';
 

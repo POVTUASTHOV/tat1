@@ -9,6 +9,8 @@ from typing import Optional, Dict, List
 import tempfile
 import logging
 import time
+import datetime
+import mimetypes
 from asgiref.sync import sync_to_async
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -21,6 +23,7 @@ from fastapi.responses import JSONResponse
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 from storage.models import File as DjangoFile, Folder, ChunkedUpload, Project
 from pydantic import BaseModel
 from rest_framework_simplejwt.tokens import AccessToken
@@ -45,8 +48,58 @@ app.add_middleware(
 )
 
 User = get_user_model()
-
 active_uploads: Dict[str, Dict] = {}
+
+def detect_content_type(filename):
+    content_type, _ = mimetypes.guess_type(filename)
+    if content_type:
+        return content_type
+    
+    extension = filename.lower().split('.')[-1] if '.' in filename else ''
+    
+    extension_map = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg', 
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'bmp': 'image/bmp',
+        'webp': 'image/webp',
+        'svg': 'image/svg+xml',
+        'tiff': 'image/tiff',
+        'ico': 'image/x-icon',
+        'mp4': 'video/mp4',
+        'avi': 'video/x-msvideo',
+        'mov': 'video/quicktime',
+        'wmv': 'video/x-ms-wmv',
+        'flv': 'video/x-flv',
+        'webm': 'video/webm',
+        'mkv': 'video/x-matroska',
+        '3gp': 'video/3gpp',
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav',
+        'ogg': 'audio/ogg',
+        'flac': 'audio/flac',
+        'aac': 'audio/aac',
+        'm4a': 'audio/mp4',
+        'pdf': 'application/pdf',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'txt': 'text/plain',
+        'csv': 'text/csv',
+        'json': 'application/json',
+        'xml': 'application/xml',
+        'html': 'text/html',
+        'css': 'text/css',
+        'js': 'application/javascript',
+        'py': 'text/x-python',
+        'zip': 'application/zip',
+        'rar': 'application/vnd.rar',
+        'tar': 'application/x-tar',
+        'gz': 'application/gzip',
+        '7z': 'application/x-7z-compressed'
+    }
+    
+    return extension_map.get(extension, 'application/octet-stream')
 
 class ChunkUploadRequest(BaseModel):
     filename: str
@@ -89,21 +142,54 @@ def get_folder_by_id(folder_id, user):
         raise Exception("Folder not found")
 
 @sync_to_async
-def create_chunked_upload_record(temp_file_path, filename, content_type, chunk_number, total_chunks, total_size, user, project, folder):
-    return ChunkedUpload.objects.create(
-        file=temp_file_path,
-        filename=filename,
-        content_type=content_type,
-        chunk_number=chunk_number,
-        total_chunks=total_chunks,
-        total_size=total_size,
+def create_or_update_chunked_upload_record(temp_file_path, filename, content_type, chunk_number, total_chunks, total_size, user, project, folder):
+    try:
+        chunk_record = ChunkedUpload.objects.get(
+            user=user,
+            filename=filename,
+            chunk_number=chunk_number,
+            project=project
+        )
+        chunk_record.file = temp_file_path
+        chunk_record.content_type = content_type
+        chunk_record.total_chunks = total_chunks
+        chunk_record.total_size = total_size
+        chunk_record.folder = folder
+        chunk_record.save()
+        return chunk_record
+    except ChunkedUpload.DoesNotExist:
+        return ChunkedUpload.objects.create(
+            file=temp_file_path,
+            filename=filename,
+            content_type=content_type,
+            chunk_number=chunk_number,
+            total_chunks=total_chunks,
+            total_size=total_size,
+            user=user,
+            project=project,
+            folder=folder
+        )
+
+@sync_to_async
+def cleanup_existing_chunks(user, project, filename):
+    chunks = ChunkedUpload.objects.filter(
         user=user,
         project=project,
-        folder=folder
+        filename=filename
     )
+    for chunk in chunks:
+        if os.path.exists(chunk.file):
+            try:
+                os.remove(chunk.file)
+            except OSError:
+                pass
+    chunks.delete()
 
 @sync_to_async
 def create_final_file(name, content_type, size, user, project, folder, file_path):
+    if content_type == 'application/octet-stream' or not content_type:
+        content_type = detect_content_type(name)
+    
     file_obj = DjangoFile(
         name=name,
         content_type=content_type,
@@ -131,6 +217,22 @@ def delete_chunk(chunk):
 @sync_to_async
 def filter_chunks_by_upload(user, project, filename):
     return ChunkedUpload.objects.filter(user=user, project=project, filename=filename)
+
+@sync_to_async
+def cleanup_old_uploads():
+    old_threshold = timezone.now() - datetime.timedelta(hours=24)
+    old_chunks = ChunkedUpload.objects.filter(created_at__lt=old_threshold)
+    
+    for chunk in old_chunks:
+        if os.path.exists(chunk.file):
+            try:
+                os.remove(chunk.file)
+            except OSError:
+                pass
+    
+    deleted_count = old_chunks.count()
+    old_chunks.delete()
+    return deleted_count
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization:
@@ -173,7 +275,19 @@ async def cleanup_temp_files():
                     pass
 
 def get_upload_key(user_id: str, project_id: str, filename: str) -> str:
-    return f"{user_id}_{project_id}_{filename}"
+    return hashlib.md5(f"{user_id}_{project_id}_{filename}".encode()).hexdigest()[:16]
+
+async def periodic_cleanup():
+    while True:
+        try:
+            deleted = await cleanup_old_uploads()
+            if deleted > 0:
+                logger.info(f"Cleaned up {deleted} old chunk uploads")
+            await cleanup_temp_files()
+        except Exception as e:
+            logger.error(f"Cleanup error: {e}")
+        
+        await asyncio.sleep(3600)
 
 @router.post("/upload/chunk/")
 async def upload_chunk(
@@ -189,7 +303,6 @@ async def upload_chunk(
 ):
     try:
         logger.info(f"Uploading chunk {chunk_number}/{total_chunks} for file {filename}")
-        logger.info(f"Project: {project_id}, Folder: {folder_id}, User: {current_user.id}")
         
         if folder_id == "":
             folder_id = None
@@ -199,28 +312,29 @@ async def upload_chunk(
         
         try:
             project = await get_project_by_id(project_id, current_user)
-            logger.info(f"Project found: {project.name}")
         except Exception as e:
-            logger.error(f"Project not found: {str(e)}")
             raise HTTPException(status_code=404, detail=f"Project not found: {str(e)}")
         
         folder = None
         if folder_id:
             try:
                 folder = await get_folder_by_id(folder_id, current_user)
-                logger.info(f"Folder found: {folder.name}")
                 if str(folder.project.id) != project_id:
-                    logger.error(f"Folder project mismatch: {folder.project.id} != {project_id}")
                     raise HTTPException(status_code=400, detail="Folder does not belong to specified project")
             except Exception as e:
-                logger.error(f"Folder not found: {str(e)}")
                 raise HTTPException(status_code=404, detail=f"Folder not found: {str(e)}")
+        
+        upload_key = get_upload_key(str(current_user.id), project_id, filename)
+        
+        if chunk_number == 0:
+            await cleanup_existing_chunks(current_user, project, filename)
+            if upload_key in active_uploads:
+                del active_uploads[upload_key]
         
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'uploads', 'chunks')
         os.makedirs(temp_dir, exist_ok=True)
         
-        upload_key = get_upload_key(str(current_user.id), project_id, filename)
-        chunk_filename = f"{upload_key}_chunk_{chunk_number:06d}"
+        chunk_filename = f"{upload_key}_c{chunk_number:03d}"
         temp_file_path = os.path.join(temp_dir, chunk_filename)
         
         bytes_written = 0
@@ -231,8 +345,6 @@ async def upload_chunk(
                     break
                 await out_file.write(chunk_data)
                 bytes_written += len(chunk_data)
-        
-        logger.info(f"Chunk {chunk_number} written: {bytes_written} bytes")
         
         if upload_key not in active_uploads:
             active_uploads[upload_key] = {
@@ -247,7 +359,7 @@ async def upload_chunk(
         
         active_uploads[upload_key]['chunks_received'].add(chunk_number)
         
-        chunk_record = await create_chunked_upload_record(
+        chunk_record = await create_or_update_chunked_upload_record(
             temp_file_path,
             filename,
             file.content_type or 'application/octet-stream',
@@ -277,7 +389,6 @@ async def upload_chunk(
             response["message"] = "All chunks uploaded, ready to complete"
             background_tasks.add_task(cleanup_temp_files)
         
-        logger.info(f"Chunk {chunk_number} upload successful")
         return JSONResponse(content=response)
     
     except HTTPException:
@@ -348,21 +459,25 @@ async def complete_upload(
                             merged_file.write(buffer)
                             total_bytes_written += len(buffer)
             
-            project_name = project.name.replace(' ', '_').lower()
+            project_name = project.name.replace(' ', '_').replace('/', '_').lower()
+            safe_filename = "".join(c for c in filename if c.isalnum() or c in '.-_')
+            
             if folder:
-                folder_path = folder.path.replace(' ', '_').lower()
-                final_file_path = f"user_{current_user.id}/{project_name}/{folder_path}/{filename}"
+                folder_path = folder.path.replace(' ', '_').replace('/', '_').lower()
+                relative_path = f"user_{current_user.id}/{project_name}/{folder_path}/{safe_filename}"
             else:
-                final_file_path = f"user_{current_user.id}/{project_name}/{filename}"
+                relative_path = f"user_{current_user.id}/{project_name}/{safe_filename}"
+            
+            final_content_type = detect_content_type(filename)
             
             file_obj = await create_final_file(
                 filename,
-                chunks[0].content_type,
+                final_content_type,
                 total_bytes_written,
                 current_user,
                 project,
                 folder,
-                final_file_path
+                relative_path
             )
             
             file_dir = os.path.dirname(file_obj.file.path)
@@ -381,8 +496,6 @@ async def complete_upload(
             
             if upload_key in active_uploads:
                 del active_uploads[upload_key]
-            
-            logger.info(f"Successfully merged file: {filename} ({total_bytes_written} bytes) in project {project.name}")
             
             return JSONResponse(content={
                 "id": str(file_obj.id),
@@ -472,6 +585,10 @@ async def cancel_upload(
     })
 
 app.include_router(router, prefix="/api")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(periodic_cleanup())
 
 if __name__ == "__main__":
     import uvicorn

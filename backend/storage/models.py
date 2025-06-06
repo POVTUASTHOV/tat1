@@ -2,7 +2,34 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 import uuid
 import os
+import mimetypes
 from users.models import User
+
+def detect_content_type(filename):
+    content_type, _ = mimetypes.guess_type(filename)
+    if content_type:
+        return content_type
+    
+    extension = filename.lower().split('.')[-1] if '.' in filename else ''
+    extension_map = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+        'gif': 'image/gif', 'bmp': 'image/bmp', 'webp': 'image/webp',
+        'svg': 'image/svg+xml', 'tiff': 'image/tiff', 'ico': 'image/x-icon',
+        'mp4': 'video/mp4', 'avi': 'video/x-msvideo', 'mov': 'video/quicktime',
+        'wmv': 'video/x-ms-wmv', 'flv': 'video/x-flv', 'webm': 'video/webm',
+        'mkv': 'video/x-matroska', '3gp': 'video/3gpp',
+        'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'ogg': 'audio/ogg',
+        'flac': 'audio/flac', 'aac': 'audio/aac', 'm4a': 'audio/mp4',
+        'pdf': 'application/pdf', 'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'txt': 'text/plain', 'csv': 'text/csv', 'json': 'application/json',
+        'xml': 'application/xml', 'html': 'text/html', 'css': 'text/css',
+        'js': 'application/javascript', 'py': 'text/x-python',
+        'zip': 'application/zip', 'rar': 'application/vnd.rar',
+        'tar': 'application/x-tar', 'gz': 'application/gzip',
+        '7z': 'application/x-7z-compressed'
+    }
+    return extension_map.get(extension, 'application/octet-stream')
 
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -84,6 +111,11 @@ class File(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='files')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
+    def save(self, *args, **kwargs):
+        if not self.content_type or self.content_type == 'application/octet-stream':
+            self.content_type = detect_content_type(self.name)
+        super().save(*args, **kwargs)
+    
     def delete(self, *args, **kwargs):
         self.user.update_storage_used(self.size, subtract=True)
         if self.file and os.path.exists(self.file.path):
@@ -104,7 +136,7 @@ class File(models.Model):
 
 class ChunkedUpload(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    file = models.CharField(max_length=500)
+    file = models.CharField(max_length=1000)
     filename = models.CharField(max_length=255)
     content_type = models.CharField(max_length=100)
     chunk_number = models.IntegerField()
@@ -115,5 +147,11 @@ class ChunkedUpload(models.Model):
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
+    def save(self, *args, **kwargs):
+        if not self.content_type or self.content_type == 'application/octet-stream':
+            self.content_type = detect_content_type(self.filename)
+        super().save(*args, **kwargs)
+    
     class Meta:
-        unique_together = ('user', 'filename', 'chunk_number')
+        db_table = 'storage_chunkedupload'
+        unique_together = ('user', 'filename', 'chunk_number', 'project')

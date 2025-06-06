@@ -63,3 +63,74 @@ export interface StorageStats {
   };
   projects: Project[];
 }
+
+// Video streaming types
+export interface VideoManifest {
+  file_id: string;
+  file_name: string;
+  file_size: number;
+  chunk_size: number;
+  total_chunks: number;
+  content_type: string;
+  stream_url: string;
+  requires_chunked_loading: boolean;
+  recommended_quality: string;
+  chunks: VideoChunk[];
+}
+
+export interface VideoChunk {
+  index: number;
+  start: number;
+  end: number;
+  url: string;
+}
+
+export interface BufferSegment {
+  start: number;
+  end: number;
+  data: ArrayBuffer;
+}
+
+// Preview types
+export interface PreviewData {
+  type: 'image' | 'video' | 'audio' | 'text' | 'pdf';
+  content_type: string;
+  size: number;
+  size_formatted?: string;
+  duration_estimate?: number;
+  stream_url?: string;
+  manifest_url?: string;
+  supports_streaming?: boolean;
+  requires_chunked_loading?: boolean;
+  recommended_quality?: string;
+  
+  // Image specific
+  width?: number;
+  height?: number;
+  format?: string;
+  mode?: string;
+  
+  // Text specific
+  content?: string;
+  lines?: number;
+  truncated?: boolean;
+  
+  // PDF specific
+  download_url?: string;
+  message?: string;
+}
+
+// Archive types
+export interface ArchiveContent {
+  name: string;
+  size: number;
+  compressed_size: number;
+  date_time: any;
+  is_dir: boolean;
+}
+
+export interface ArchiveData {
+  archive_type: string;
+  total_files: number;
+  contents: ArchiveContent[];
+}

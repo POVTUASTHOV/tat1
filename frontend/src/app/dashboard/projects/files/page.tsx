@@ -113,10 +113,8 @@ export default function FilesPage() {
     
     if (isArchive(file.name)) {
       setShowArchivePreview(true);
-    } else if (isPreviewable(file.content_type)) {
-      setShowPreview(true);
     } else {
-      handleDownloadFile(file.id, file.name);
+      setShowPreview(true);
     }
   };
 

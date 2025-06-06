@@ -243,6 +243,37 @@ class ApiService {
   async getProjectTree(projectId: string): Promise<any> {
     return this.request<any>(`${API_ENDPOINTS.PROJECTS}${projectId}/tree/`);
   }
+
+  async getVideoManifest(fileId: string): Promise<any> {
+    return this.request<any>(`/media-preview/video/${fileId}/manifest/`);
+  }
+
+  getVideoStreamUrl(fileId: string): string {
+    return `${API_BASE_URL}/media-preview/video/${fileId}/stream/`;
+  }
+
+  getVideoChunkUrl(fileId: string, chunkIndex: number): string {
+    return `${API_BASE_URL}/media-preview/video/${fileId}/chunk/${chunkIndex}/`;
+  }
+
+  async getFilePreview(fileId: string): Promise<any> {
+    return this.request<any>(`/media-preview/preview/${fileId}/preview/`);
+  }
+
+  async getArchiveContents(fileId: string): Promise<any> {
+    return this.request<any>(`/media-preview/archive/${fileId}/contents/`);
+  }
+
+  async extractArchive(fileId: string, data: {
+    target_project_id: string;
+    target_folder_id?: string;
+    create_subfolder: boolean;
+  }): Promise<any> {
+    return this.request<any>(`/media-preview/archive/${fileId}/extract/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const apiService = new ApiService();

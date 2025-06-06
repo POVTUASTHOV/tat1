@@ -235,15 +235,13 @@ export default function ProjectsPage() {
   };
 
   const handleFileDoubleClick = (file: any) => {
-  setSelectedFile(file);
-  
-  if (isArchive(file.name)) {
+    setSelectedFile(file);
+    
+    if (isArchive(file.name)) {
       setShowArchivePreview(true);
-    } else if (isPreviewable(file.content_type)) {
-      setShowPreview(true);
     } else {
-      handleDownloadFile(file.id, file.name);
-   }
+      setShowPreview(true);
+    }
   };
 
   const getFolderOptions = (projectId: string, excludeFolderId?: string): Array<{ id: string; name: string; level: number }> => {

@@ -115,7 +115,10 @@ export default function ProjectDetailPage() {
    return ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(extension || '');
  };
 
- const handlePreviewClick = (file: FileItem) => {
+ const handlePreviewClick = (file: FileItem, event: React.MouseEvent) => {
+   event.preventDefault();
+   event.stopPropagation();
+   
    setSelectedFile(file);
    
    if (isArchive(file.name)) {
@@ -309,7 +312,7 @@ export default function ProjectDetailPage() {
                          <Button
                            variant="ghost"
                            size="sm"
-                           onClick={() => handlePreviewClick(file)}
+                           onClick={(e) => handlePreviewClick(file, e)}
                            title="View archive contents"
                            className="bg-orange-100 text-orange-600 hover:bg-orange-200"
                          >
@@ -321,7 +324,7 @@ export default function ProjectDetailPage() {
                          <Button
                            variant="ghost"
                            size="sm"
-                           onClick={() => handlePreviewClick(file)}
+                           onClick={(e) => handlePreviewClick(file, e)}
                            title="Preview file"
                            className="bg-blue-100 text-blue-600 hover:bg-blue-200"
                          >

@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.http import HttpResponse, Http404, JsonResponse
+from django.http import HttpResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.conf import settings
 from PIL import Image
 import zipfile
@@ -11,9 +11,9 @@ import rarfile
 import os
 import mimetypes
 import logging
+import re
 from io import BytesIO
 import json
-import re
 import shutil
 from storage.models import File as DjangoFile, Folder, Project
 from django.core.files import File
@@ -36,9 +36,9 @@ class FilePreviewViewSet(viewsets.ViewSet):
             if content_type.startswith('image/'):
                 return self._preview_image(file_obj, request)
             elif content_type.startswith('video/'):
-                return self._preview_video(file_obj, request)
+                return self._preview_video_enhanced(file_obj, request)
             elif content_type.startswith('audio/'):
-                return self._preview_audio(file_obj, request)
+                return self._preview_audio_enhanced(file_obj, request)
             elif content_type in ['text/plain', 'application/json', 'text/csv']:
                 return self._preview_text(file_obj, request)
             elif content_type == 'application/pdf':
@@ -79,33 +79,34 @@ class FilePreviewViewSet(viewsets.ViewSet):
                         'height': height,
                         'format': format_name,
                         'mode': mode,
-                        'file_url': f'/api/preview/{file_obj.id}/stream/'
+                        'file_url': f'/media-preview/video/{file_obj.id}/stream/'
                     })
                     
         except Exception as e:
             return Response({'error': f'Image preview failed: {str(e)}'}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _preview_video(self, file_obj, request):
+    def _preview_video_enhanced(self, file_obj, request):
         return JsonResponse({
             'type': 'video',
             'content_type': file_obj.content_type,
             'size': file_obj.size,
-            'stream_url': f'/api/preview/{file_obj.id}/stream/',
-            'supports_streaming': file_obj.content_type in [
-                'video/mp4', 'video/webm', 'video/ogg'
-            ]
+            'size_formatted': self._format_file_size(file_obj.size),
+            'duration_estimate': self._estimate_duration(file_obj),
+            'stream_url': f'/media-preview/video/{file_obj.id}/stream/',
+            'manifest_url': f'/media-preview/video/{file_obj.id}/manifest/',
+            'supports_streaming': True,
+            'requires_chunked_loading': file_obj.size > 100 * 1024 * 1024,
+            'recommended_quality': self._get_recommended_quality(file_obj.size)
         })
 
-    def _preview_audio(self, file_obj, request):
+    def _preview_audio_enhanced(self, file_obj, request):
         return JsonResponse({
             'type': 'audio',
             'content_type': file_obj.content_type,
             'size': file_obj.size,
-            'stream_url': f'/api/preview/{file_obj.id}/stream/',
-            'supports_streaming': file_obj.content_type in [
-                'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mpeg'
-            ]
+            'stream_url': f'/media-preview/video/{file_obj.id}/stream/',
+            'supports_streaming': True
         })
 
     def _preview_text(self, file_obj, request):
@@ -142,6 +143,32 @@ class FilePreviewViewSet(viewsets.ViewSet):
             'message': 'PDF preview requires download'
         })
 
+    def _estimate_duration(self, file_obj):
+        try:
+            bitrate_estimate = 5000000
+            duration_seconds = (file_obj.size * 8) / bitrate_estimate
+            return max(1, int(duration_seconds))
+        except:
+            return None
+
+    def _get_recommended_quality(self, file_size):
+        if file_size > 2 * 1024 * 1024 * 1024:
+            return '720p'
+        elif file_size > 500 * 1024 * 1024:
+            return '1080p'
+        else:
+            return 'original'
+
+    def _format_file_size(self, bytes_size):
+        if bytes_size == 0:
+            return "0 Bytes"
+        size_names = ["Bytes", "KB", "MB", "GB", "TB"]
+        i = 0
+        while bytes_size >= 1024 and i < len(size_names) - 1:
+            bytes_size /= 1024
+            i += 1
+        return f"{bytes_size:.2f} {size_names[i]}"
+
     @action(detail=True, methods=['get'])
     def stream(self, request, pk=None):
         try:
@@ -152,40 +179,165 @@ class FilePreviewViewSet(viewsets.ViewSet):
             
             file_size = os.path.getsize(file_obj.file.path)
             range_header = request.META.get('HTTP_RANGE', '').strip()
-            range_match = None
             
             if range_header:
                 range_match = re.search(r'bytes=(\d+)-(\d*)', range_header)
+                if range_match:
+                    start = int(range_match.group(1))
+                    end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+                    
+                    def file_iterator():
+                        with open(file_obj.file.path, 'rb') as f:
+                            f.seek(start)
+                            remaining = end - start + 1
+                            while remaining:
+                                chunk_size = min(1024 * 1024, remaining)  # 1MB chunks
+                                data = f.read(chunk_size)
+                                if not data:
+                                    break
+                                remaining -= len(data)
+                                yield data
+
+                    response = StreamingHttpResponse(
+                        file_iterator(),
+                        status=206,
+                        content_type=file_obj.content_type
+                    )
+                    response['Accept-Ranges'] = 'bytes'
+                    response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+                    response['Content-Length'] = str(end - start + 1)
+                    return response
             
-            if range_match:
-                start = int(range_match.group(1))
-                end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-                
-                with open(file_obj.file.path, 'rb') as f:
-                    f.seek(start)
-                    chunk_size = end - start + 1
-                    data = f.read(chunk_size)
-                
-                response = HttpResponse(data, content_type=file_obj.content_type)
-                response['Accept-Ranges'] = 'bytes'
-                response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
-                response['Content-Length'] = str(chunk_size)
-                response.status_code = 206
-            else:
-                with open(file_obj.file.path, 'rb') as f:
-                    data = f.read()
-                
-                response = HttpResponse(data, content_type=file_obj.content_type)
+            # Fallback to full file
+            with open(file_obj.file.path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type=file_obj.content_type)
                 response['Content-Length'] = str(file_size)
+                response['Accept-Ranges'] = 'bytes'
+                return response
+                
+        except DjangoFile.DoesNotExist:
+            raise Http404("File not found")
+
+class VideoStreamingViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def get_range_response(self, file_path, range_header, content_type):
+        file_size = os.path.getsize(file_path)
+        byte_start = 0
+        byte_end = file_size - 1
+
+        if range_header:
+            range_match = re.search(r'bytes=(\d+)-(\d*)', range_header)
+            if range_match:
+                byte_start = int(range_match.group(1))
+                if range_match.group(2):
+                    byte_end = int(range_match.group(2))
+
+        chunk_size = min(8192 * 1024, byte_end - byte_start + 1)
+        
+        def file_iterator():
+            with open(file_path, 'rb') as f:
+                f.seek(byte_start)
+                remaining = byte_end - byte_start + 1
+                while remaining:
+                    read_size = min(chunk_size, remaining)
+                    data = f.read(read_size)
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+
+        response = StreamingHttpResponse(
+            file_iterator(),
+            status=206 if range_header else 200,
+            content_type=content_type
+        )
+        
+        response['Accept-Ranges'] = 'bytes'
+        response['Content-Length'] = str(byte_end - byte_start + 1)
+        response['Content-Range'] = f'bytes {byte_start}-{byte_end}/{file_size}'
+        
+        if not range_header:
+            response['Content-Length'] = str(file_size)
+        
+        response['Cache-Control'] = 'public, max-age=3600'
+        return response
+
+    @action(detail=True, methods=['get'])
+    def stream(self, request, pk=None):
+        try:
+            file_obj = DjangoFile.objects.get(id=pk, user=request.user)
             
-            response['Cache-Control'] = 'public, max-age=3600'
-            return response
-            
+            if not os.path.exists(file_obj.file.path):
+                raise Http404("File not found on server")
+
+            content_type = file_obj.content_type
+            if not content_type.startswith('video/') and not content_type.startswith('audio/'):
+                content_type = mimetypes.guess_type(file_obj.file.path)[0] or 'application/octet-stream'
+
+            range_header = request.META.get('HTTP_RANGE', '').strip()
+            return self.get_range_response(file_obj.file.path, range_header, content_type)
+
         except DjangoFile.DoesNotExist:
             raise Http404("File not found")
         except Exception as e:
             logger.error(f"Stream error for file {pk}: {str(e)}")
             raise Http404("Stream failed")
+
+    @action(detail=True, methods=['get'])
+    def manifest(self, request, pk=None):
+        try:
+            file_obj = DjangoFile.objects.get(id=pk, user=request.user)
+            
+            if not file_obj.content_type.startswith('video/'):
+                return Response({'error': 'Not a video file'}, status=400)
+
+            file_size = file_obj.size
+            chunk_size = 10 * 1024 * 1024
+            total_chunks = (file_size + chunk_size - 1) // chunk_size
+
+            manifest = {
+                'file_id': str(file_obj.id),
+                'file_name': file_obj.name,
+                'file_size': file_size,
+                'chunk_size': chunk_size,
+                'total_chunks': total_chunks,
+                'content_type': file_obj.content_type,
+                'stream_url': f'/media-preview/video/{file_obj.id}/stream/',
+                'chunks': [
+                    {
+                        'index': i,
+                        'start': i * chunk_size,
+                        'end': min((i + 1) * chunk_size - 1, file_size - 1),
+                        'url': f'/media-preview/video/{file_obj.id}/chunk/{i}/'
+                    }
+                    for i in range(total_chunks)
+                ]
+            }
+
+            return Response(manifest)
+
+        except DjangoFile.DoesNotExist:
+            raise Http404("File not found")
+
+    @action(detail=True, methods=['get'], url_path='chunk/(?P<chunk_index>[0-9]+)')
+    def chunk(self, request, pk=None, chunk_index=None):
+        try:
+            file_obj = DjangoFile.objects.get(id=pk, user=request.user)
+            
+            if not os.path.exists(file_obj.file.path):
+                raise Http404("File not found on server")
+
+            chunk_size = 10 * 1024 * 1024
+            chunk_index = int(chunk_index)
+            start_byte = chunk_index * chunk_size
+            end_byte = min(start_byte + chunk_size - 1, file_obj.size - 1)
+
+            range_header = f'bytes={start_byte}-{end_byte}'
+            return self.get_range_response(file_obj.file.path, f'bytes={start_byte}-{end_byte}', file_obj.content_type)
+
+        except (DjangoFile.DoesNotExist, ValueError):
+            raise Http404("Chunk not found")
 
 
 class ArchiveViewSet(viewsets.ViewSet):
