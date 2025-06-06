@@ -137,26 +137,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'range',
-]
-
-CORS_EXPOSE_HEADERS = [
-    'content-range',
-    'accept-ranges',
-    'content-length',
-    'content-type',
-]
-
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp')
@@ -203,5 +183,34 @@ LOGGING = {
         },
     },
 }
+
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'range',
+    'if-range',
+    'cache-control',
+]
+
+CORS_EXPOSE_HEADERS = [
+    'content-range',
+    'accept-ranges',
+    'content-length',
+    'content-type',
+    'cache-control',
+    'etag',
+    'last-modified',
+]
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
 
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
