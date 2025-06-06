@@ -211,6 +211,6 @@ CORS_EXPOSE_HEADERS = [
 ]
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
-
+SECURE_REFERRER_POLICY = None
 
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)

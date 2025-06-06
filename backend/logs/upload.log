@@ -6669,3 +6669,21 @@ INFO 2025-06-06 05:39:18,211 views 223670 127036093888192 Streaming HEAD b3560b0
 INFO 2025-06-06 05:39:18,337 views 223670 127036085495488 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
 INFO 2025-06-06 05:39:39,514 views 223670 127036085495488 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
 INFO 2025-06-06 05:39:39,625 views 223670 127036093888192 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 07:39:04,202 views 31675 125369260701376 Streaming HEAD 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 07:39:04,257 views 31675 125369242867392 Streaming GET 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=0-
+INFO 2025-06-06 07:39:04,326 views 31675 125369252308672 Streaming HEAD 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 07:39:06,340 views 31675 125369242867392 Streaming GET 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=1048576-
+INFO 2025-06-06 07:39:20,480 views 31675 125369252308672 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 07:39:20,532 views 31675 125369242867392 Streaming GET b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=0-
+INFO 2025-06-06 07:39:20,552 views 31675 125369242867392 Streaming GET b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=5149294592-
+INFO 2025-06-06 07:39:20,589 views 31675 125369260701376 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 08:12:06,008 views 72252 132532201846464 Streaming HEAD 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 08:12:06,060 views 72252 132532184012480 Streaming GET 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=0-
+INFO 2025-06-06 08:12:06,135 views 72252 132532193453760 Streaming HEAD 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 08:12:09,269 views 72252 132532184012480 Streaming GET 261778b8-86f6-4a55-a717-0219609e1b20: 12q.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=1048576-
+INFO 2025-06-06 08:12:13,543 views 72252 132532193453760 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 08:12:13,595 views 72252 132532175619776 Streaming GET b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=0-
+INFO 2025-06-06 08:12:13,609 views 72252 132532175619776 Streaming GET b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: bytes=5149294592-
+INFO 2025-06-06 08:12:13,643 views 72252 132532201846464 Streaming HEAD b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4; codecs="avc1.42E01E, mp4a.40.2", range: None
+INFO 2025-06-06 08:20:45,072 views 79664 128057244374720 Streaming GET b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4, range: bytes=0-
+INFO 2025-06-06 08:20:45,087 views 79664 128057244374720 Streaming GET b3560b0f-9c5e-4596-a8b5-2c34fcaaa81e: DJI_0442_1920x1080.mp4, type: video/mp4, range: bytes=5149294592-

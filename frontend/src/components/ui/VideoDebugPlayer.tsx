@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, AlertCircle, Download, Info } from 'lucide-react';
+import { Loader2, AlertCircle, Download, Info, ExternalLink } from 'lucide-react';
 
 interface VideoDebugPlayerProps {
   fileId: string;
@@ -85,22 +85,10 @@ export default function VideoDebugPlayer({ fileId, fileName, fileSize }: VideoDe
     addDebug(`Setting up stream: ${streamUrl}`);
 
     try {
-      const testResponse = await fetch(streamUrl, { method: 'HEAD' });
-      addDebug(`Stream test response: ${testResponse.status}`);
-      
-      if (testResponse.ok) {
-        const contentType = testResponse.headers.get('Content-Type');
-        const contentLength = testResponse.headers.get('Content-Length');
-        const acceptRanges = testResponse.headers.get('Accept-Ranges');
-        
-        addDebug(`Headers - Type: ${contentType}, Length: ${contentLength}, Ranges: ${acceptRanges}`);
-        
-        video.src = streamUrl;
-        video.load();
-        addDebug('Video source set and loading started');
-      } else {
-        throw new Error(`Stream not accessible: ${testResponse.status}`);
-      }
+      video.src = streamUrl;
+      video.preload = 'none';
+      video.load();
+      addDebug('Video source set directly');
     } catch (err) {
       addDebug(`Stream setup failed: ${err}`);
       throw err;
@@ -213,6 +201,24 @@ export default function VideoDebugPlayer({ fileId, fileName, fileSize }: VideoDe
     return 'Video should stream normally.';
   };
 
+  const tryDirectVideoElement = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const token = localStorage.getItem('token');
+    const directUrl = `http://localhost:8000/media-preview/video/${fileId}/stream/?token=${token}`;
+    
+    addDebug('Trying direct video element approach');
+    
+    video.removeAttribute('src');
+    video.innerHTML = `
+      <source src="${directUrl}" type="video/mp4">
+      <source src="${directUrl}" type="video/quicktime">
+      <source src="${directUrl}" type="video/*">
+    `;
+    video.load();
+  };
+
   return (
     <div className="bg-black rounded-lg overflow-hidden">
       {isLoading && (
@@ -245,6 +251,12 @@ export default function VideoDebugPlayer({ fileId, fileName, fileSize }: VideoDe
               Direct Stream
             </button>
             <button
+              onClick={tryDirectVideoElement}
+              className="px-4 py-2 bg-purple-600 rounded hover:bg-purple-700 text-white"
+            >
+              Try Source Tags
+            </button>
+            <button
               onClick={handleDownload}
               className="px-4 py-2 bg-green-600 rounded hover:bg-green-700 text-white"
             >
@@ -259,8 +271,9 @@ export default function VideoDebugPlayer({ fileId, fileName, fileSize }: VideoDe
         ref={videoRef}
         className="w-full h-auto"
         controls
-        preload="metadata"
+        preload="none"
         playsInline
+        muted
       />
 
       <div className="p-4 bg-gray-900 text-white">
@@ -316,6 +329,12 @@ export default function VideoDebugPlayer({ fileId, fileName, fileSize }: VideoDe
                 {method === 'token-url' ? 'Token URL' : 'Direct'}
               </button>
             ))}
+            <button
+              onClick={tryDirectVideoElement}
+              className="px-3 py-1 text-xs bg-purple-600 rounded hover:bg-purple-700 text-white"
+            >
+              Source Tags
+            </button>
           </div>
           <button
             onClick={handleDownload}

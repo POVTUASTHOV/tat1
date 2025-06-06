@@ -115,15 +115,19 @@ class FilePreviewViewSet(viewsets.ViewSet):
         if hasattr(request, 'auth') and request.auth:
             token = str(request.auth)
         
-        # Use VideoProcessor to get detailed video info
         processor = VideoProcessor(file_obj.file.path)
         video_info = processor.get_video_info()
         
-        # Create video info summary
         video_summary = {
-            'compatible': processor.is_web_compatible(),
-            'needs_conversion': processor.needs_conversion(),
+            'compatible': True,
+            'needs_conversion': False,
             'file_size': processor.get_file_size(),
+            'can_stream': True,
+            'streaming_recommendation': {
+                'action': 'stream_ready',
+                'reason': 'Forced streaming enabled for dev',
+                'can_preview': True
+            }
         }
         
         if video_info:
@@ -148,7 +152,7 @@ class FilePreviewViewSet(viewsets.ViewSet):
             'stream_url_with_token': f'/media-preview/video/{file_obj.id}/stream/?token={token}' if token else None,
             'supports_streaming': True,
             'video_info': video_summary,
-            'recommended_action': self._get_recommended_action(file_obj, video_summary)
+            'recommended_action': 'stream_ready'
         })
 
     def _preview_audio(self, file_obj, request):
@@ -275,9 +279,7 @@ class VideoStreamingViewSet(viewsets.ViewSet):
             range_match = re.search(r'bytes=(\d+)-(\d*)', range_header)
             if range_match:
                 start = int(range_match.group(1))
-                end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-                
-                # Ensure end doesn't exceed file size
+                end = int(range_match.group(2)) if range_match.group(2) else min(start + 50*1024*1024, file_size - 1)
                 end = min(end, file_size - 1)
                 
                 def file_iterator():
@@ -285,10 +287,11 @@ class VideoStreamingViewSet(viewsets.ViewSet):
                         with open(file_path, 'rb') as f:
                             f.seek(start)
                             remaining = end - start + 1
-                            chunk_size = min(65536, remaining)  # 64KB chunks
+                            chunk_size = 512 * 1024
                             
                             while remaining > 0:
-                                chunk = f.read(min(chunk_size, remaining))
+                                read_size = min(chunk_size, remaining)
+                                chunk = f.read(read_size)
                                 if not chunk:
                                     break
                                 remaining -= len(chunk)
@@ -310,8 +313,9 @@ class VideoStreamingViewSet(viewsets.ViewSet):
             def file_iterator():
                 try:
                     with open(file_path, 'rb') as f:
+                        chunk_size = 1024 * 1024
                         while True:
-                            chunk = f.read(65536)  # 64KB chunks
+                            chunk = f.read(chunk_size)
                             if not chunk:
                                 break
                             yield chunk
@@ -325,9 +329,8 @@ class VideoStreamingViewSet(viewsets.ViewSet):
             )
             response['Content-Length'] = str(file_size)
 
-        # Set proper headers for video streaming
         response['Accept-Ranges'] = 'bytes'
-        response['Cache-Control'] = 'public, max-age=3600'
+        response['Cache-Control'] = 'no-cache'
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Headers'] = 'Range, Authorization, Content-Type'
         response['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges'
@@ -354,7 +357,7 @@ class VideoStreamingViewSet(viewsets.ViewSet):
             content_type = self.get_optimal_content_type(file_obj)
             range_header = request.META.get('HTTP_RANGE')
             
-            logger.info(f"Streaming {request.method} {pk}: {file_obj.name}, type: {content_type}, range: {range_header}")
+            logger.info(f"Streaming {request.method} {pk}: {file_obj.name}, size: {file_obj.size}, range: {range_header}")
             
             if request.method == 'HEAD':
                 response = HttpResponse(content_type=content_type)
@@ -835,15 +838,15 @@ class VideoStreamingViewSet(viewsets.ViewSet):
         extension = os.path.splitext(file_obj.name)[1].lower()
         
         if extension == '.mp4':
-            return 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"'
-        elif extension == '.webm':
-            return 'video/webm; codecs="vp8, vorbis"'
-        elif extension in ['.mov', '.qt']:
-            return 'video/quicktime'
+            return 'video/mp4'
+        elif extension == '.mov':
+            return 'video/mp4'
         elif extension == '.avi':
-            return 'video/x-msvideo'
+            return 'video/mp4'
+        elif extension == '.webm':
+            return 'video/webm'
         else:
-            return file_obj.content_type or 'video/mp4'
+            return 'video/mp4'
 
     def create_streaming_response(self, file_path, content_type, range_header=None):
         file_size = os.path.getsize(file_path)
