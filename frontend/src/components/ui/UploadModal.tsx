@@ -1,7 +1,9 @@
+// frontend/src/components/ui/UploadModal.tsx - Sửa đổi
+
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, Check, AlertCircle, File } from 'lucide-react';
+import { Upload, X, Check, AlertCircle, File, Video, Cpu, Zap } from 'lucide-react';
 import Button from './Button';
 import { formatFileSize } from '../../lib/utils';
 
@@ -9,8 +11,11 @@ interface UploadFile {
   file: File;
   id: string;
   progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
+  status: 'pending' | 'uploading' | 'completed' | 'error' | 'processing';
   error?: string;
+  isVideo?: boolean;
+  processingStatus?: 'processing' | 'completed' | 'no_processing_available';
+  processingMessage?: string;
 }
 
 interface UploadModalProps {
@@ -35,9 +40,33 @@ export default function UploadModal({
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [gpuStatus, setGpuStatus] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateFileId = () => Math.random().toString(36).substr(2, 9);
+
+  // Check GPU status khi modal mở
+  const checkGpuStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:8001/api/gpu/status', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setGpuStatus(data);
+      }
+    } catch (error) {
+      console.error('Failed to check GPU status:', error);
+    }
+  };
+
+  const isVideoFile = (file: File): boolean => {
+    const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm', '3gp', 'm4v'];
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    return videoExtensions.includes(extension || '') || file.type.startsWith('video/');
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -70,10 +99,16 @@ export default function UploadModal({
       file,
       id: generateFileId(),
       progress: 0,
-      status: 'pending'
+      status: 'pending',
+      isVideo: isVideoFile(file)
     }));
 
     setUploadFiles(prev => [...prev, ...newUploadFiles]);
+    
+    // Check GPU status nếu có video
+    if (newUploadFiles.some(f => f.isVideo)) {
+      checkGpuStatus();
+    }
   };
 
   const removeFile = (fileId: string) => {
@@ -142,9 +177,23 @@ export default function UploadModal({
         throw new Error('Failed to complete upload');
       }
 
+      const result = await completeResponse.json();
+
+      // Update status dựa trên response
       setUploadFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { ...f, status: 'completed', progress: 100 } : f
+        f.id === uploadFile.id ? { 
+          ...f, 
+          status: result.is_video && result.processing_status === 'processing' ? 'processing' : 'completed',
+          progress: 100,
+          processingStatus: result.processing_status,
+          processingMessage: result.message
+        } : f
       ));
+
+      // Poll processing status cho video
+      if (result.is_video && result.processing_status === 'processing') {
+        pollVideoProcessingStatus(result.id, uploadFile.id);
+      }
 
     } catch (error) {
       setUploadFiles(prev => prev.map(f => 
@@ -155,6 +204,43 @@ export default function UploadModal({
         } : f
       ));
     }
+  };
+
+  const pollVideoProcessingStatus = async (fileId: string, uploadFileId: string) => {
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:8001/api/video/processing-status/${fileId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (!data.processing) {
+            // Processing completed
+            setUploadFiles(prev => prev.map(f => 
+              f.id === uploadFileId ? { 
+                ...f, 
+                status: 'completed',
+                processingStatus: 'completed',
+                processingMessage: 'Video conversion completed'
+              } : f
+            ));
+            return;
+          }
+        }
+        
+        // Continue polling
+        setTimeout(checkStatus, 3000);
+      } catch (error) {
+        console.error('Failed to check processing status:', error);
+        // Stop polling on error
+      }
+    };
+
+    setTimeout(checkStatus, 2000);
   };
 
   const startUpload = async () => {
@@ -179,16 +265,37 @@ export default function UploadModal({
     setUploadFiles([]);
   };
 
-  const getStatusIcon = (status: UploadFile['status']) => {
-    switch (status) {
+  const getStatusIcon = (uploadFile: UploadFile) => {
+    switch (uploadFile.status) {
       case 'completed':
         return <Check className="w-4 h-4 text-green-600" />;
       case 'error':
         return <AlertCircle className="w-4 h-4 text-red-600" />;
       case 'uploading':
         return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>;
+      case 'processing':
+        return (
+          <div className="flex items-center">
+            <Video className="w-4 h-4 text-yellow-600 animate-pulse" />
+          </div>
+        );
       default:
-        return <File className="w-4 h-4 text-gray-400" />;
+        return uploadFile.isVideo ? <Video className="w-4 h-4 text-purple-500" /> : <File className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const getStatusText = (uploadFile: UploadFile) => {
+    switch (uploadFile.status) {
+      case 'completed':
+        return uploadFile.isVideo ? 'Video ready' : 'Completed';
+      case 'error':
+        return 'Failed';
+      case 'uploading':
+        return 'Uploading...';
+      case 'processing':
+        return 'Converting to H.264...';
+      default:
+        return uploadFile.isVideo ? 'Video ready to upload' : 'Pending';
     }
   };
 
@@ -205,6 +312,9 @@ export default function UploadModal({
   };
 
   if (!isOpen) return null;
+
+  const videoFiles = uploadFiles.filter(f => f.isVideo);
+  const hasVideos = videoFiles.length > 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -225,6 +335,28 @@ export default function UploadModal({
               <X className="w-6 h-6" />
             </button>
           </div>
+
+          {/* GPU Status Display */}
+          {hasVideos && gpuStatus && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                {gpuStatus.should_use_gpu ? (
+                  <Zap className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Cpu className="w-4 h-4 text-orange-600" />
+                )}
+                <span className="text-sm font-medium">
+                  Video Processing: {gpuStatus.should_use_gpu ? 'GPU Acceleration' : 'CPU Processing'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">{gpuStatus.reason}</p>
+              {gpuStatus.gpu_info && gpuStatus.gpu_info.gpus && (
+                <div className="text-xs text-gray-500 mt-1">
+                  GPU: {gpuStatus.gpu_info.gpus[0]?.name} ({gpuStatus.gpu_info.gpus[0]?.gpu_utilization}% usage)
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="p-6 flex-1 overflow-y-auto">
@@ -242,9 +374,14 @@ export default function UploadModal({
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Drop files here or click to upload
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-500 mb-2">
               Support for multiple files. Maximum 50GB per file.
             </p>
+            {hasVideos && (
+              <p className="text-blue-600 text-sm">
+                🎬 Videos will be automatically converted to H.264 for optimal web playback
+              </p>
+            )}
             
             <input
               ref={fileInputRef}
@@ -267,6 +404,11 @@ export default function UploadModal({
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-gray-900">
                   Files ({uploadFiles.length})
+                  {hasVideos && (
+                    <span className="ml-2 text-sm text-purple-600">
+                      ({videoFiles.length} video{videoFiles.length !== 1 ? 's' : ''})
+                    </span>
+                  )}
                 </h4>
                 <div className="flex space-x-2">
                   <Button
@@ -293,14 +435,26 @@ export default function UploadModal({
                   <div key={uploadFile.id} className="border border-gray-200 rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        {getStatusIcon(uploadFile.status)}
+                        {getStatusIcon(uploadFile)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {uploadFile.file.name}
-                          </p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {uploadFile.file.name}
+                            </p>
+                            {uploadFile.isVideo && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                Video
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-gray-500">
                             {formatFileSize(uploadFile.file.size)}
                           </p>
+                          {uploadFile.processingMessage && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              {uploadFile.processingMessage}
+                            </p>
+                          )}
                         </div>
                       </div>
                       
@@ -320,27 +474,25 @@ export default function UploadModal({
                           </div>
                         )}
                         
-                        {uploadFile.status === 'completed' && (
-                          <span className="text-xs text-green-600 font-medium">
-                            Completed
-                          </span>
+                        {uploadFile.status === 'processing' && (
+                          <div className="w-24">
+                            <div className="flex items-center justify-between text-xs text-yellow-600 mb-1">
+                              <span>Converting...</span>
+                              <Video className="w-3 h-3 animate-pulse" />
+                            </div>
+                            <div className="w-full bg-yellow-200 rounded-full h-1">
+                              <div className="bg-yellow-600 h-1 rounded-full animate-pulse w-full"></div>
+                            </div>
+                          </div>
                         )}
                         
-                        {uploadFile.status === 'error' && (
-                          <span className="text-xs text-red-600 font-medium">
-                            Failed
-                          </span>
-                        )}
-                        
-                        {uploadFile.status === 'pending' && (
-                          <span className="text-xs text-gray-500 font-medium">
-                            Pending
-                          </span>
-                        )}
+                        <span className="text-xs font-medium min-w-[80px] text-right">
+                          {getStatusText(uploadFile)}
+                        </span>
                         
                         <button
                           onClick={() => removeFile(uploadFile.id)}
-                          disabled={uploadFile.status === 'uploading'}
+                          disabled={uploadFile.status === 'uploading' || uploadFile.status === 'processing'}
                           className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
                         >
                           <X className="w-4 h-4" />
@@ -359,6 +511,11 @@ export default function UploadModal({
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-600">
                 {uploadFiles.filter(f => f.status === 'completed').length} of {uploadFiles.length} completed
+                {hasVideos && (
+                  <span className="block text-xs text-purple-600">
+                    Videos are converted to H.264 for optimal playback
+                  </span>
+                )}
               </div>
               <div className="flex space-x-3">
                 <Button

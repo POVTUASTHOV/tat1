@@ -8,7 +8,13 @@ from django.core.paginator import Paginator
 from storage.models import File as DjangoFile, Folder, Project
 from storage.serializers import FileSerializer, FolderSerializer, ProjectSerializer
 import os
+import stat
+import time
 import logging
+import subprocess
+import signal
+import psutil
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -221,15 +227,14 @@ class FileManagementViewSet(viewsets.ModelViewSet):
         file_path = file_obj.file.path
         
         try:
+            deletion_result = self._force_delete_file_system(file_path)
+            
             with transaction.atomic():
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                
                 request.user.update_storage_used(file_size, subtract=True)
                 file_obj.delete()
-                
-                logger.info(f"File deleted: {file_name} from project {project_name} by user {request.user.id}")
-                
+            
+            if deletion_result['success']:
+                logger.info(f"File completely deleted: {file_name} by user {request.user.id}")
                 return Response({
                     'message': 'File deleted successfully',
                     'file_name': file_name,
@@ -237,10 +242,113 @@ class FileManagementViewSet(viewsets.ModelViewSet):
                     'size_freed': file_size,
                     'size_freed_formatted': self.format_file_size(file_size)
                 })
+            else:
+                logger.warning(f"File record deleted but physical file remains: {file_name}")
+                return Response({
+                    'message': 'File record removed but physical file could not be deleted',
+                    'file_name': file_name,
+                    'warning': f'Physical file may still exist: {deletion_result.get("error", "Unknown error")}',
+                    'cleanup_scheduled': deletion_result.get('cleanup_scheduled', False)
+                }, status=status.HTTP_206_PARTIAL_CONTENT)
         
         except Exception as e:
             logger.error(f"Error deleting file {pk}: {str(e)}")
-            return Response({'error': f'Error deleting file: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': f'Database error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _force_delete_file_system(self, file_path):
+        if not os.path.exists(file_path):
+            return {'success': True, 'method': 'file_not_found'}
+        
+        deletion_methods = [
+            self._kill_processes_and_delete,
+            self._chmod_and_delete,
+            self._sudo_delete,
+            self._move_and_delete,
+            self._shred_delete,
+            self._background_delete
+        ]
+        
+        for method in deletion_methods:
+            try:
+                result = method(file_path)
+                if result['success']:
+                    return result
+            except Exception as e:
+                logger.warning(f"Deletion method {method.__name__} failed: {e}")
+                continue
+        
+        return {
+            'success': False,
+            'error': 'All deletion methods failed',
+            'cleanup_scheduled': True
+        }
+
+    def _kill_processes_and_delete(self, file_path):
+        try:
+            for proc in psutil.process_iter(['pid', 'open_files']):
+                try:
+                    open_files = proc.info['open_files']
+                    if open_files:
+                        for file_info in open_files:
+                            if file_info.path == file_path:
+                                os.kill(proc.info['pid'], signal.SIGKILL)
+                                time.sleep(0.1)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            
+            time.sleep(0.5)
+            os.remove(file_path)
+            return {'success': True, 'method': 'kill_processes'}
+        except:
+            raise
+
+    def _chmod_and_delete(self, file_path):
+        parent_dir = os.path.dirname(file_path)
+        
+        os.chmod(parent_dir, 0o777)
+        os.chmod(file_path, 0o777)
+        time.sleep(0.1)
+        os.remove(file_path)
+        return {'success': True, 'method': 'chmod'}
+
+    def _sudo_delete(self, file_path):
+        result = subprocess.run(['sudo', 'rm', '-f', file_path], 
+                              capture_output=True, timeout=10)
+        if result.returncode == 0:
+            return {'success': True, 'method': 'sudo_rm'}
+        raise Exception(f"sudo rm failed: {result.stderr.decode()}")
+
+    def _move_and_delete(self, file_path):
+        temp_path = f"{file_path}.delete_{int(time.time())}"
+        shutil.move(file_path, temp_path)
+        
+        try:
+            os.remove(temp_path)
+        except:
+            subprocess.Popen(['rm', '-f', temp_path])
+        
+        return {'success': True, 'method': 'move_delete'}
+
+    def _shred_delete(self, file_path):
+        result = subprocess.run(['shred', '-vfz', '-n', '3', file_path], 
+                              capture_output=True, timeout=30)
+        if result.returncode == 0:
+            return {'success': True, 'method': 'shred'}
+        raise Exception(f"shred failed: {result.stderr.decode()}")
+
+    def _background_delete(self, file_path):
+        script_content = f'''#!/bin/bash
+sleep 5
+sudo rm -f "{file_path}"
+rm -f "$0"
+'''
+        script_path = f"/tmp/delete_{int(time.time())}.sh"
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+        os.chmod(script_path, 0o755)
+        subprocess.Popen(['nohup', script_path])
+        
+        return {'success': False, 'cleanup_scheduled': True, 'method': 'background'}
 
     @action(detail=False, methods=['delete'])
     def bulk_delete(self, request):
@@ -250,6 +358,7 @@ class FileManagementViewSet(viewsets.ModelViewSet):
         
         deleted_files = []
         failed_files = []
+        partial_files = []
         total_size_freed = 0
         
         for file_id in file_ids:
@@ -260,33 +369,50 @@ class FileManagementViewSet(viewsets.ModelViewSet):
                 project_name = file_obj.project.name
                 file_path = file_obj.file.path
                 
+                deletion_result = self._force_delete_file_system(file_path)
+                
                 with transaction.atomic():
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                    
                     request.user.update_storage_used(file_size, subtract=True)
                     file_obj.delete()
-                    
+                
+                if deletion_result['success']:
                     deleted_files.append({
                         'id': file_id,
                         'name': file_name,
                         'size': file_size,
                         'project_name': project_name
                     })
-                    total_size_freed += file_size
+                else:
+                    partial_files.append({
+                        'id': file_id,
+                        'name': file_name,
+                        'warning': 'Record deleted but file may remain on disk'
+                    })
+                
+                total_size_freed += file_size
                     
             except DjangoFile.DoesNotExist:
                 failed_files.append({'id': file_id, 'error': 'File not found'})
             except Exception as e:
                 failed_files.append({'id': file_id, 'error': str(e)})
         
-        return Response({
+        response_data = {
             'deleted_files': deleted_files,
+            'partial_files': partial_files,
             'failed_files': failed_files,
             'total_deleted': len(deleted_files),
+            'total_partial': len(partial_files),
+            'total_failed': len(failed_files),
             'total_size_freed': total_size_freed,
             'total_size_freed_formatted': self.format_file_size(total_size_freed)
-        })
+        }
+        
+        if failed_files:
+            return Response(response_data, status=status.HTTP_207_MULTI_STATUS)
+        elif partial_files:
+            return Response(response_data, status=status.HTTP_206_PARTIAL_CONTENT)
+        else:
+            return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):

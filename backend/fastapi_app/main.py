@@ -12,6 +12,8 @@ import time
 import datetime
 import mimetypes
 from asgiref.sync import sync_to_async
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
@@ -28,6 +30,14 @@ from storage.models import File as DjangoFile, Folder, ChunkedUpload, Project
 from pydantic import BaseModel
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import InvalidToken
+
+# Import video processor
+try:
+    from video_processing.video_processor import process_uploaded_video, VideoProcessor, GPUMonitor
+    VIDEO_PROCESSING_AVAILABLE = True
+except ImportError:
+    VIDEO_PROCESSING_AVAILABLE = False
+    logging.warning("Video processing not available. Install ffmpeg and create video_processing module.")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +59,9 @@ app.add_middleware(
 
 User = get_user_model()
 active_uploads: Dict[str, Dict] = {}
+
+# Thread pool cho video processing
+video_processing_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="video_proc")
 
 def detect_content_type(filename):
     content_type, _ = mimetypes.guess_type(filename)
@@ -203,6 +216,24 @@ def create_final_file(name, content_type, size, user, project, folder, file_path
     return file_obj
 
 @sync_to_async
+def create_final_file_with_video_processing(name, content_type, size, user, project, folder, file_path):
+    if content_type == 'application/octet-stream' or not content_type:
+        content_type = detect_content_type(name)
+    
+    file_obj = DjangoFile(
+        name=name,
+        content_type=content_type,
+        size=size,
+        user=user,
+        project=project,
+        folder=folder
+    )
+    file_obj.file.name = file_path
+    file_obj.save()
+    
+    return file_obj
+
+@sync_to_async
 def get_chunks_for_upload(user, project, filename):
     return list(ChunkedUpload.objects.filter(user=user, project=project, filename=filename).order_by('chunk_number'))
 
@@ -233,6 +264,59 @@ def cleanup_old_uploads():
     deleted_count = old_chunks.count()
     old_chunks.delete()
     return deleted_count
+
+def process_video_background(file_obj_id, original_file_path):
+    if not VIDEO_PROCESSING_AVAILABLE:
+        logger.warning(f"Video processing not available for file {file_obj_id}")
+        return
+        
+    try:
+        from storage.models import File as DjangoFile
+        
+        file_obj = DjangoFile.objects.get(id=file_obj_id)
+        
+        logger.info(f"Starting video processing for file {file_obj.name}")
+        
+        success, message, output_path = process_uploaded_video(original_file_path)
+        
+        if success and output_path:
+            if os.path.exists(output_path):
+                original_name = file_obj.name
+                base_name = os.path.splitext(original_name)[0]
+                new_filename = f"{base_name}.mp4"
+                
+                final_dir = os.path.dirname(file_obj.file.path)
+                final_path = os.path.join(final_dir, new_filename)
+                
+                if output_path != final_path:
+                    shutil.move(output_path, final_path)
+                
+                new_relative_path = os.path.relpath(final_path, settings.MEDIA_ROOT)
+                file_obj.file.name = new_relative_path
+                
+                new_size = os.path.getsize(final_path)
+                size_diff = new_size - file_obj.size
+                file_obj.size = new_size
+                
+                file_obj.content_type = 'video/mp4'
+                file_obj.name = new_filename
+                
+                file_obj.save()
+                
+                if size_diff != 0:
+                    file_obj.user.update_storage_used(abs(size_diff), subtract=(size_diff < 0))
+                
+                if original_file_path != final_path and os.path.exists(original_file_path):
+                    os.remove(original_file_path)
+                
+                logger.info(f"Video processing completed for {file_obj.name}. {message}")
+            else:
+                logger.error(f"Output file not found: {output_path}")
+        else:
+            logger.error(f"Video processing failed for {file_obj.name}: {message}")
+            
+    except Exception as e:
+        logger.error(f"Video background processing error: {e}", exc_info=True)
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization:
@@ -459,6 +543,9 @@ async def complete_upload(
                             merged_file.write(buffer)
                             total_bytes_written += len(buffer)
             
+            final_content_type = detect_content_type(filename)
+            is_video = final_content_type.startswith('video/')
+            
             project_name = project.name.replace(' ', '_').replace('/', '_').lower()
             safe_filename = "".join(c for c in filename if c.isalnum() or c in '.-_')
             
@@ -468,25 +555,86 @@ async def complete_upload(
             else:
                 relative_path = f"user_{current_user.id}/{project_name}/{safe_filename}"
             
-            final_content_type = detect_content_type(filename)
-            
-            file_obj = await create_final_file(
-                filename,
-                final_content_type,
-                total_bytes_written,
-                current_user,
-                project,
-                folder,
-                relative_path
-            )
-            
-            file_dir = os.path.dirname(file_obj.file.path)
+            final_file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+            file_dir = os.path.dirname(final_file_path)
             os.makedirs(file_dir, exist_ok=True)
             
-            import shutil
-            shutil.move(merged_file_path, file_obj.file.path)
-            
-            await update_user_storage(current_user, file_obj.size)
+            if is_video and VIDEO_PROCESSING_AVAILABLE:
+                logger.info(f"Processing video file: {filename}")
+                
+                import shutil
+                shutil.move(merged_file_path, final_file_path)
+                
+                file_obj = await create_final_file_with_video_processing(
+                    filename,
+                    final_content_type,
+                    total_bytes_written,
+                    current_user,
+                    project,
+                    folder,
+                    relative_path
+                )
+                
+                await update_user_storage(current_user, file_obj.size)
+                
+                loop = asyncio.get_event_loop()
+                loop.run_in_executor(
+                    video_processing_executor,
+                    process_video_background,
+                    str(file_obj.id),
+                    final_file_path
+                )
+                
+                response_data = {
+                    "id": str(file_obj.id),
+                    "name": file_obj.name,
+                    "size": file_obj.size,
+                    "content_type": file_obj.content_type,
+                    "project": str(project.id),
+                    "project_name": project.name,
+                    "folder": str(folder.id) if folder else None,
+                    "folder_name": folder.name if folder else None,
+                    "uploaded_at": str(file_obj.uploaded_at),
+                    "total_bytes": total_bytes_written,
+                    "file_path": file_obj.get_file_path(),
+                    "is_video": True,
+                    "processing_status": "processing",
+                    "message": "Video uploaded successfully. Converting to H.264 in background..."
+                }
+            else:
+                import shutil
+                shutil.move(merged_file_path, final_file_path)
+                
+                file_obj = await create_final_file_with_video_processing(
+                    filename,
+                    final_content_type,
+                    total_bytes_written,
+                    current_user,
+                    project,
+                    folder,
+                    relative_path
+                )
+                
+                await update_user_storage(current_user, file_obj.size)
+                
+                response_data = {
+                    "id": str(file_obj.id),
+                    "name": file_obj.name,
+                    "size": file_obj.size,
+                    "content_type": file_obj.content_type,
+                    "project": str(project.id),
+                    "project_name": project.name,
+                    "folder": str(folder.id) if folder else None,
+                    "folder_name": folder.name if folder else None,
+                    "uploaded_at": str(file_obj.uploaded_at),
+                    "total_bytes": total_bytes_written,
+                    "file_path": file_obj.get_file_path(),
+                    "is_video": is_video,
+                    "processing_status": "completed" if not is_video else "no_processing_available"
+                }
+                
+                if is_video and not VIDEO_PROCESSING_AVAILABLE:
+                    response_data["message"] = "Video uploaded but processing unavailable. Install ffmpeg for H.264 conversion."
             
             for chunk in chunks:
                 chunk_path = chunk.file
@@ -497,19 +645,7 @@ async def complete_upload(
             if upload_key in active_uploads:
                 del active_uploads[upload_key]
             
-            return JSONResponse(content={
-                "id": str(file_obj.id),
-                "name": file_obj.name,
-                "size": file_obj.size,
-                "content_type": file_obj.content_type,
-                "project": str(project.id),
-                "project_name": project.name,
-                "folder": str(folder.id) if folder else None,
-                "folder_name": folder.name if folder else None,
-                "uploaded_at": str(file_obj.uploaded_at),
-                "total_bytes": total_bytes_written,
-                "file_path": file_obj.get_file_path()
-            })
+            return JSONResponse(content=response_data)
         
         except Exception as e:
             if os.path.exists(merged_file_path):
@@ -584,11 +720,160 @@ async def cancel_upload(
         "filename": filename
     })
 
+# Thêm endpoint để check video processing status
+@router.get("/video/processing-status/{file_id}")
+async def get_video_processing_status(
+    file_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Kiểm tra trạng thái xử lý video"""
+    try:
+        from storage.models import File as DjangoFile
+        
+        file_obj = await sync_to_async(DjangoFile.objects.get)(id=file_id, user=current_user)
+        
+        # Kiểm tra xem file có đang được xử lý không
+        is_processing = False
+        
+        # Logic để check processing status
+        # Có thể dựa vào file name pattern, database field, hoặc file existence
+        if file_obj.content_type.startswith('video/'):
+            # Kiểm tra xem có file đang xử lý không
+            processing_file = f"{file_obj.file.path}_processing"
+            is_processing = os.path.exists(processing_file)
+        
+        return JSONResponse(content={
+            "file_id": file_id,
+            "processing": is_processing,
+            "content_type": file_obj.content_type,
+            "size": file_obj.size,
+            "name": file_obj.name,
+            "video_processing_available": VIDEO_PROCESSING_AVAILABLE
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="File not found")
+
+# Test endpoint để check GPU status
+@router.get("/gpu/status")
+async def get_gpu_status():
+    """Endpoint để kiểm tra trạng thái GPU"""
+    if not VIDEO_PROCESSING_AVAILABLE:
+        return JSONResponse(content={
+            "video_processing_available": False,
+            "error": "Video processing module not available"
+        })
+    
+    gpu_info = GPUMonitor.get_nvidia_gpu_usage()
+    should_use_gpu, reason = GPUMonitor.should_use_gpu()
+    
+    return JSONResponse(content={
+        "video_processing_available": True,
+        "gpu_available": gpu_info is not None,
+        "should_use_gpu": should_use_gpu,
+        "reason": reason,
+        "gpu_info": gpu_info
+    })
+
+# Test endpoint để test video processing
+@router.post("/test/video-processing")
+async def test_video_processing(
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+):
+    """Test endpoint để kiểm tra video processing"""
+    if not VIDEO_PROCESSING_AVAILABLE:
+        return JSONResponse(content={
+            "error": "Video processing not available",
+            "suggestion": "Install ffmpeg and create video_processing module"
+        })
+    
+    # Kiểm tra file có phải video không
+    content_type = detect_content_type(file.filename or "")
+    if not content_type.startswith('video/'):
+        return JSONResponse(content={
+            "error": "File is not a video",
+            "detected_type": content_type
+        })
+    
+    # Lưu file tạm để test
+    temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp', 'test')
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    temp_file_path = os.path.join(temp_dir, f"test_{int(time.time())}_{file.filename}")
+    
+    try:
+        # Lưu file upload
+        async with aiofiles.open(temp_file_path, 'wb') as f:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                await f.write(chunk)
+        
+        # Test video processing
+        processor = VideoProcessor(temp_file_path)
+        video_info = processor.get_video_info()
+        is_h264 = processor.is_h264_already()
+        width, height = processor.get_video_resolution()
+        estimated_vram = processor.estimate_vram_usage()
+        
+        # Check GPU status
+        should_use_gpu, gpu_reason = GPUMonitor.should_use_gpu()
+        gpu_info = GPUMonitor.get_nvidia_gpu_usage()
+        
+        result = {
+            "file_info": {
+                "filename": file.filename,
+                "size": os.path.getsize(temp_file_path),
+                "content_type": content_type
+            },
+            "video_analysis": {
+                "is_h264_already": is_h264,
+                "resolution": f"{width}x{height}",
+                "estimated_vram_needed_mb": estimated_vram,
+                "video_info": video_info
+            },
+            "gpu_status": {
+                "should_use_gpu": should_use_gpu,
+                "reason": gpu_reason,
+                "gpu_info": gpu_info
+            },
+            "processing_recommendation": "no_conversion_needed" if is_h264 else ("gpu_encoding" if should_use_gpu else "cpu_encoding")
+        }
+        
+        return JSONResponse(content=result)
+        
+    except Exception as e:
+        return JSONResponse(content={
+            "error": f"Test failed: {str(e)}"
+        })
+    finally:
+        # Cleanup
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
 app.include_router(router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(periodic_cleanup())
+    
+    # Log video processing availability
+    if VIDEO_PROCESSING_AVAILABLE:
+        logger.info("Video processing module loaded successfully")
+        try:
+            gpu_info = GPUMonitor.get_nvidia_gpu_usage()
+            if gpu_info:
+                logger.info(f"NVIDIA GPU detected: {len(gpu_info['gpus'])} GPU(s)")
+                for i, gpu in enumerate(gpu_info['gpus']):
+                    logger.info(f"GPU {i}: {gpu['name']} - {gpu['gpu_utilization']}% utilization, {gpu['memory_usage_percent']:.1f}% VRAM")
+            else:
+                logger.info("No NVIDIA GPU detected or nvidia-smi not available")
+        except Exception as e:
+            logger.warning(f"GPU detection failed: {e}")
+    else:
+        logger.warning("Video processing module not available. Videos will be stored without H.264 conversion.")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,4 +1,5 @@
 import os
+import stat
 from pathlib import Path
 from datetime import timedelta
 import pymysql
@@ -141,6 +142,10 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp')
 
+# File permission settings
+FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+
 CHUNK_SIZE = 100 * 1024 * 1024
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024 * 1024
 CONCURRENT_CHUNKS = 4
@@ -181,9 +186,18 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'storage': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'file_management': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
     },
 }
-
 
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -214,3 +228,24 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 SECURE_REFERRER_POLICY = None
 
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
+# Function to ensure proper media permissions
+def ensure_media_permissions():
+    if os.path.exists(MEDIA_ROOT):
+        try:
+            for root, dirs, files in os.walk(MEDIA_ROOT):
+                # Set directory permissions
+                for d in dirs:
+                    dir_path = os.path.join(root, d)
+                    os.chmod(dir_path, FILE_UPLOAD_DIRECTORY_PERMISSIONS)
+                
+                # Set file permissions
+                for f in files:
+                    file_path = os.path.join(root, f)
+                    os.chmod(file_path, FILE_UPLOAD_PERMISSIONS)
+        except (OSError, PermissionError) as e:
+            print(f"Warning: Could not set media permissions: {e}")
+
+# Only run permission fix in development
+if DEBUG:
+    ensure_media_permissions()

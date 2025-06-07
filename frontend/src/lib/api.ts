@@ -94,13 +94,29 @@ class ApiService {
     }
 
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorMessage = `API Error: ${response.status}`;
+      
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        }
+      } catch (parseError) {
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
       
       if (response.status === 401) {
         this.handleAuthError();
       }
       
-      throw new Error(`API Error: ${response.status} - ${errorText}`);
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -214,17 +230,42 @@ class ApiService {
     return response.blob();
   }
 
-  async deleteFile(fileId: string): Promise<void> {
-    return this.request<void>(`/file-management/files/${fileId}/delete_file/`, {
-      method: 'DELETE',
-    });
+  async deleteFile(fileId: string): Promise<{ message: string; file_name: string }> {
+    try {
+      return await this.request<{ message: string; file_name: string }>(`/file-management/files/${fileId}/delete_file/`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      // Enhanced error handling for file deletion
+      let errorMessage = error instanceof Error ? error.message : 'Failed to delete file';
+      
+      if (errorMessage.includes('Permission denied')) {
+        errorMessage = 'Cannot delete file due to permission restrictions. Please contact administrator.';
+      } else if (errorMessage.includes('File not found')) {
+        errorMessage = 'File not found or already deleted.';
+      } else if (errorMessage.includes('Error deleting file')) {
+        errorMessage = 'File deletion failed. The file may be locked or in use.';
+      }
+      
+      throw new Error(errorMessage);
+    }
   }
 
   async deleteFiles(fileIds: string[]): Promise<{ deleted_files: any[]; failed_files: any[] }> {
-    return this.request<{ deleted_files: any[]; failed_files: any[] }>('/file-management/files/bulk_delete/', {
-      method: 'DELETE',
-      body: JSON.stringify({ file_ids: fileIds }),
-    });
+    try {
+      return await this.request<{ deleted_files: any[]; failed_files: any[] }>('/file-management/files/bulk_delete/', {
+        method: 'DELETE',
+        body: JSON.stringify({ file_ids: fileIds }),
+      });
+    } catch (error) {
+      let errorMessage = error instanceof Error ? error.message : 'Bulk delete failed';
+      
+      if (errorMessage.includes('Permission denied')) {
+        errorMessage = 'Some files cannot be deleted due to permission restrictions.';
+      }
+      
+      throw new Error(errorMessage);
+    }
   }
 
   async createFolder(data: { name: string; parent?: string; project: string }): Promise<any> {

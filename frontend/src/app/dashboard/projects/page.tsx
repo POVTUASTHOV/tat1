@@ -10,6 +10,7 @@ import UploadModal from '../../../components/ui/UploadModal';
 import { apiService } from '../../../lib/api';
 import { Project } from '../../../types';
 import { formatFileSize } from '../../../lib/utils';
+import { useToastStore } from '../../../stores/toastStore';
 
 interface FolderNode {
   id: string;
@@ -209,13 +210,78 @@ export default function ProjectsPage() {
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
-    if (confirm(`Delete ${fileName}?`)) {
-      try {
-        await apiService.deleteFile(fileId);
-        await loadProjects();
-      } catch (error) {
-        console.error('Failed to delete file:', error);
+    if (!confirm(`Delete ${fileName}?`)) return;
+    
+    const { addToast } = useToastStore.getState();
+    
+    try {
+      const result = await apiService.deleteFile(fileId);
+      
+      if (result.warning) {
+        addToast({
+          type: 'warning',
+          title: 'Partial Deletion',
+          message: `${fileName}: ${result.warning}`,
+          duration: 8000
+        });
+      } else {
+        addToast({
+          type: 'success',
+          title: 'File Deleted',
+          message: `${fileName} has been permanently deleted`,
+          duration: 4000
+        });
       }
+      
+      await loadProjects();
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      addToast({
+        type: 'error',
+        title: 'Delete Failed',
+        message: `Could not delete ${fileName}: ${errorMessage}`,
+        duration: 8000
+      });
+      
+      if (errorMessage.includes('locked') || errorMessage.includes('permission')) {
+        if (confirm(`${errorMessage}\n\nForce remove database record? (File may remain on disk)`)) {
+          try {
+            await forceRemoveFileRecord(fileId);
+            await loadProjects();
+            
+            addToast({
+              type: 'warning',
+              title: 'Record Removed',
+              message: `Database record for ${fileName} removed. Physical file may still exist.`,
+              duration: 6000
+            });
+          } catch (forceError) {
+            addToast({
+              type: 'error',
+              title: 'Force Removal Failed',
+              message: 'Contact administrator for manual cleanup.',
+              duration: 8000
+            });
+          }
+        }
+      }
+    }
+  };
+
+  const forceRemoveFileRecord = async (fileId: string) => {
+    const response = await fetch(`http://localhost:8000/file-management/files/${fileId}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Force removal failed');
     }
   };
 

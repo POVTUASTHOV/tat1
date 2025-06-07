@@ -2,8 +2,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 import uuid
 import os
+import stat
+import logging
 import mimetypes
 from users.models import User
+
+logger = logging.getLogger(__name__)
 
 def detect_content_type(filename):
     content_type, _ = mimetypes.guess_type(filename)
@@ -117,10 +121,68 @@ class File(models.Model):
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
-        self.user.update_storage_used(self.size, subtract=True)
-        if self.file and os.path.exists(self.file.path):
-            os.remove(self.file.path)
+        file_size = self.size
+        user = self.user
+        self._safe_delete_file()
         super().delete(*args, **kwargs)
+        user.update_storage_used(file_size, subtract=True)
+    
+    def _safe_delete_file(self):
+        if not self.file or not hasattr(self.file, 'path'):
+            return
+        
+        file_path = self.file.path
+        
+        if not os.path.exists(file_path):
+            logger.warning(f"File not found on disk: {file_path}")
+            return
+        
+        try:
+            self._try_delete_file(file_path)
+            logger.info(f"File successfully deleted: {file_path}")
+        except PermissionError:
+            self._force_delete_file(file_path)
+        except OSError as e:
+            if e.errno == 13:
+                self._force_delete_file(file_path)
+            else:
+                logger.error(f"OSError deleting file {file_path}: {e}")
+                self._mark_for_cleanup(file_path)
+    
+    def _try_delete_file(self, file_path):
+        if not os.access(file_path, os.W_OK):
+            try:
+                os.chmod(file_path, stat.S_IWRITE | stat.S_IREAD)
+            except OSError:
+                pass
+        
+        os.remove(file_path)
+    
+    def _force_delete_file(self, file_path):
+        try:
+            parent_dir = os.path.dirname(file_path)
+            
+            try:
+                os.chmod(parent_dir, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
+                os.chmod(file_path, stat.S_IWRITE | stat.S_IREAD)
+                os.remove(file_path)
+                logger.info(f"File force deleted: {file_path}")
+            except OSError:
+                self._mark_for_cleanup(file_path)
+                
+        except Exception as e:
+            logger.error(f"Force delete failed for {file_path}: {e}")
+            self._mark_for_cleanup(file_path)
+    
+    def _mark_for_cleanup(self, file_path):
+        cleanup_file = os.path.join(os.path.dirname(file_path), '.cleanup_queue')
+        try:
+            os.makedirs(os.path.dirname(cleanup_file), exist_ok=True)
+            with open(cleanup_file, 'a') as f:
+                f.write(f"{file_path}\n")
+            logger.warning(f"File marked for cleanup: {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to mark file for cleanup: {e}")
     
     def get_file_path(self):
         project_name = self.project.name if self.project else 'No Project'
