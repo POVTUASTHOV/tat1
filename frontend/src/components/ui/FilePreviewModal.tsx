@@ -131,6 +131,11 @@ function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotatio
   }, [fileId, contentType]);
 
   if (contentType.startsWith('image/')) {
+    const [imageError, setImageError] = useState(false);
+    const imageUrl = imageError 
+      ? data.direct_url 
+      : data.thumbnail_url ? `http://localhost:8000${data.thumbnail_url}?size=800` : data.direct_url;
+    
     return (
       <div className="h-full flex flex-col">
         {data.width && (
@@ -142,13 +147,14 @@ function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotatio
         )}
         <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100">
           <img
-            src={`http://localhost:8000/media-preview/preview/${fileId}/preview/?size=800`}
+            src={imageUrl}
             alt="Preview"
             className="max-w-full max-h-full object-contain"
             style={{
               transform: `scale(${zoom}) rotate(${rotation}deg)`,
               transition: 'transform 0.2s ease'
             }}
+            onError={() => setImageError(true)}
           />
         </div>
       </div>

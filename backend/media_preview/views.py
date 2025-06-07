@@ -60,33 +60,75 @@ class FilePreviewViewSet(viewsets.ViewSet):
         try:
             with Image.open(file_obj.file.path) as img:
                 width, height = img.size
-                format_name = img.format
+                format_name = img.format or 'Unknown'
                 mode = img.mode
                 
-                thumbnail_size = request.GET.get('size', '300')
-                if thumbnail_size in ['150', '300', '600', '800']:
-                    thumb_size = int(thumbnail_size)
-                    img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
-                    
-                    buffer = BytesIO()
-                    img.save(buffer, format='JPEG', quality=85)
-                    buffer.seek(0)
-                    
-                    response = HttpResponse(buffer.getvalue(), content_type='image/jpeg')
-                    response['Cache-Control'] = 'public, max-age=3600'
-                    return response
-                else:
-                    return JsonResponse({
-                        'width': width,
-                        'height': height,
-                        'format': format_name,
-                        'mode': mode,
-                        'type': 'image'
-                    })
+                thumbnail_url = f'/media-preview/preview/{file_obj.id}/thumbnail/'
+                direct_url = f'http://localhost:3001/media/{file_obj.file.name}'
+                
+                return JsonResponse({
+                    'type': 'image',
+                    'width': width,
+                    'height': height,
+                    'format': format_name,
+                    'mode': mode,
+                    'size': file_obj.size,
+                    'content_type': file_obj.content_type,
+                    'thumbnail_url': thumbnail_url,
+                    'direct_url': direct_url
+                })
                     
         except Exception as e:
-            return Response({'error': f'Image preview failed: {str(e)}'}, 
-                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Image preview error: {str(e)}")
+            return JsonResponse({
+                'type': 'image',
+                'error': f'Image preview failed: {str(e)}',
+                'direct_url': f'http://localhost:3001/media/{file_obj.file.name}',
+                'size': file_obj.size,
+                'content_type': file_obj.content_type
+            })
+
+    @action(detail=True, methods=['get'])
+    def thumbnail(self, request, pk=None):
+        try:
+            file_obj = DjangoFile.objects.get(id=pk, user=request.user)
+            
+            if not os.path.exists(file_obj.file.path):
+                raise Http404("File not found on server")
+            
+            thumbnail_size = request.GET.get('size', '300')
+            if thumbnail_size not in ['150', '300', '600', '800']:
+                thumbnail_size = '300'
+                
+            with Image.open(file_obj.file.path) as img:
+                thumb_size = int(thumbnail_size)
+                img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
+                
+                buffer = BytesIO()
+                img_format = img.format or 'JPEG'
+                if img_format.upper() == 'JPEG' or img_format.upper() == 'JPG':
+                    img.save(buffer, format='JPEG', quality=85)
+                    content_type = 'image/jpeg'
+                elif img_format.upper() == 'PNG':
+                    img.save(buffer, format='PNG')
+                    content_type = 'image/png'
+                else:
+                    img = img.convert('RGB')
+                    img.save(buffer, format='JPEG', quality=85)
+                    content_type = 'image/jpeg'
+                
+                buffer.seek(0)
+                
+                response = HttpResponse(buffer.getvalue(), content_type=content_type)
+                response['Cache-Control'] = 'public, max-age=3600'
+                response['Access-Control-Allow-Origin'] = '*'
+                return response
+                
+        except DjangoFile.DoesNotExist:
+            raise Http404("File not found")
+        except Exception as e:
+            logger.error(f"Thumbnail error: {str(e)}")
+            raise Http404("Thumbnail generation failed")
 
     def _preview_video(self, file_obj, request):
         relative_path = file_obj.file.name
