@@ -124,6 +124,30 @@ class VideoProcessor:
         
         return 1920, 1080
     
+    def process_video(self, output_path: str) -> Tuple[bool, str]:
+        should_use_gpu, gpu_reason = GPUMonitor.should_use_gpu()
+        
+        if should_use_gpu:
+            gpu_info = GPUMonitor.get_nvidia_gpu_usage()
+            if gpu_info:
+                for i, gpu in enumerate(gpu_info['gpus']):
+                    estimated_vram = self.estimate_vram_usage()
+                    vram_available = gpu['memory_total_mb'] - gpu['memory_used_mb']
+                    
+                    if vram_available >= estimated_vram:
+                        logger.info(f"Using GPU {i} for encoding")
+                        if self.convert_to_h264_gpu(output_path, i):
+                            return True, f"Successfully converted using GPU {i}"
+                        else:
+                            logger.warning(f"GPU {i} encoding failed, falling back to CPU")
+                            break
+        
+        logger.info(f"Using CPU for encoding")
+        if self.convert_to_h264_cpu(output_path):
+            return True, "Successfully converted using CPU"
+        else:
+            return False, "Both GPU and CPU encoding failed"
+    
     def estimate_vram_usage(self) -> int:
         width, height = self.get_video_resolution()
         
@@ -158,50 +182,33 @@ class VideoProcessor:
                 bufsize = "24M"
             
             cmd = [
-                'ffmpeg',
-                '-y',
+                'ffmpeg', '-y',
                 '-i', self.input_path,
-                
                 '-c:v', 'h264_nvenc',
                 '-gpu', str(gpu_id),
-                
                 '-preset', 'medium',
                 '-profile:v', 'high',
                 '-level:v', '4.1',
-                
                 '-b:v', video_bitrate,
                 '-maxrate', maxrate,
                 '-bufsize', bufsize,
-                
                 '-c:a', 'aac',
                 '-b:a', '128k',
                 '-ac', '2',
-                
                 '-f', 'mp4',
                 '-movflags', '+faststart',
-                
                 output_path
             ]
             
-            logger.info(f"GPU encoding command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
             
-            result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True, 
-                timeout=3600
-            )
-            
-            if result.returncode == 0:
+            if result.returncode == 0 and os.path.exists(output_path):
                 logger.info(f"GPU encoding successful: {output_path}")
                 return True
             else:
                 logger.error(f"GPU encoding failed: {result.stderr}")
                 return False
                 
-        except subprocess.TimeoutExpired:
-            logger.error("GPU encoding timeout")
-            return False
         except Exception as e:
             logger.error(f"GPU encoding error: {e}")
             return False
@@ -221,51 +228,35 @@ class VideoProcessor:
                 crf = "25"
             
             cmd = [
-                'ffmpeg',
-                '-y',
+                'ffmpeg', '-y',
                 '-i', self.input_path,
-                
                 '-c:v', 'libx264',
                 '-preset', preset,
                 '-crf', crf,
                 '-profile:v', 'high',
                 '-level:v', '4.1',
-                
                 '-threads', str(min(psutil.cpu_count(), 8)),
-                
                 '-c:a', 'aac',
                 '-b:a', '128k',
                 '-ac', '2',
-                
                 '-f', 'mp4',
                 '-movflags', '+faststart',
-                
                 output_path
             ]
             
-            logger.info(f"CPU encoding command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
             
-            result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True, 
-                timeout=7200
-            )
-            
-            if result.returncode == 0:
+            if result.returncode == 0 and os.path.exists(output_path):
                 logger.info(f"CPU encoding successful: {output_path}")
                 return True
             else:
                 logger.error(f"CPU encoding failed: {result.stderr}")
                 return False
                 
-        except subprocess.TimeoutExpired:
-            logger.error("CPU encoding timeout")
-            return False
         except Exception as e:
             logger.error(f"CPU encoding error: {e}")
             return False
-    
+
     def process_video(self, output_path: str) -> Tuple[bool, str]:
         if self.is_h264_already():
             try:
@@ -308,14 +299,17 @@ def process_uploaded_video(file_path: str) -> Tuple[bool, str, Optional[str]]:
     try:
         processor = VideoProcessor(file_path)
         
+        if processor.is_h264_already():
+            return True, "Video already in H.264 format, no conversion needed", file_path
+        
         base_dir = os.path.dirname(file_path)
         original_name = os.path.basename(file_path)
         name_without_ext = os.path.splitext(original_name)[0]
-        temp_output_path = os.path.join(base_dir, f"{name_without_ext}_temp.mp4")
+        temp_output_path = os.path.join(base_dir, f"{name_without_ext}_converting.mp4")
         
         success, message = processor.process_video(temp_output_path)
         
-        if success:
+        if success and os.path.exists(temp_output_path):
             return True, message, temp_output_path
         else:
             return False, message, None

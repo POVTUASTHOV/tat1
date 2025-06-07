@@ -2,6 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.http import HttpResponse, Http404, JsonResponse
 from django.conf import settings
 from PIL import Image
@@ -20,6 +22,7 @@ from django.core.files import File
 logger = logging.getLogger(__name__)
 
 class FilePreviewViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=['get'])
@@ -93,7 +96,7 @@ class FilePreviewViewSet(viewsets.ViewSet):
             'content_type': file_obj.content_type,
             'size': file_obj.size,
             'size_formatted': self._format_file_size(file_obj.size),
-            'stream_url': f'/media/{relative_path}',
+            'stream_url': f'http://localhost:3001/media/{relative_path}',
             'supports_streaming': True,
             'video_info': {
                 'file_size': file_obj.size,
@@ -109,7 +112,7 @@ class FilePreviewViewSet(viewsets.ViewSet):
             'type': 'audio',
             'content_type': file_obj.content_type,
             'size': file_obj.size,
-            'stream_url': f'/media/{relative_path}',
+            'stream_url': f'http://localhost:3001/media/{relative_path}',
             'supports_streaming': True
         })
 
@@ -158,6 +161,7 @@ class FilePreviewViewSet(viewsets.ViewSet):
         return f"{bytes_size:.2f} {size_names[i]}"
 
 class ArchiveViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=['get'])

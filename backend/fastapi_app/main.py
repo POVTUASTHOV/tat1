@@ -277,46 +277,60 @@ def process_video_background(file_obj_id, original_file_path):
         
         logger.info(f"Starting video processing for file {file_obj.name}")
         
-        success, message, output_path = process_uploaded_video(original_file_path)
+        processor = VideoProcessor(original_file_path)
         
-        if success and output_path:
-            if os.path.exists(output_path):
-                original_name = file_obj.name
-                base_name = os.path.splitext(original_name)[0]
-                new_filename = f"{base_name}.mp4"
-                
-                final_dir = os.path.dirname(file_obj.file.path)
-                final_path = os.path.join(final_dir, new_filename)
-                
-                if output_path != final_path:
-                    shutil.move(output_path, final_path)
-                
-                new_relative_path = os.path.relpath(final_path, settings.MEDIA_ROOT)
-                file_obj.file.name = new_relative_path
-                
-                new_size = os.path.getsize(final_path)
-                size_diff = new_size - file_obj.size
-                file_obj.size = new_size
-                
-                file_obj.content_type = 'video/mp4'
-                file_obj.name = new_filename
-                
-                file_obj.save()
-                
-                if size_diff != 0:
-                    file_obj.user.update_storage_used(abs(size_diff), subtract=(size_diff < 0))
-                
-                if original_file_path != final_path and os.path.exists(original_file_path):
-                    os.remove(original_file_path)
-                
-                logger.info(f"Video processing completed for {file_obj.name}. {message}")
-            else:
-                logger.error(f"Output file not found: {output_path}")
+        if processor.is_h264_already():
+            logger.info(f"Video {file_obj.name} already in H.264 format")
+            return
+        
+        original_name = file_obj.name
+        base_name = os.path.splitext(original_name)[0]
+        original_extension = os.path.splitext(original_name)[1]
+        
+        final_dir = os.path.dirname(file_obj.file.path)
+        final_path = os.path.join(final_dir, original_name)
+        
+        temp_output_path = os.path.join(final_dir, f"{base_name}_converting.mp4")
+        
+        success, message = processor.process_video(temp_output_path)
+        
+        if success and os.path.exists(temp_output_path):
+            original_size = file_obj.size
+            new_size = os.path.getsize(temp_output_path)
+            size_diff = new_size - original_size
+            
+            if os.path.exists(original_file_path):
+                os.remove(original_file_path)
+            
+            os.rename(temp_output_path, final_path)
+            
+            new_relative_path = os.path.relpath(final_path, settings.MEDIA_ROOT)
+            file_obj.file.name = new_relative_path
+            file_obj.size = new_size
+            file_obj.content_type = 'video/mp4'
+            file_obj.save()
+            
+            if size_diff != 0:
+                file_obj.user.update_storage_used(abs(size_diff), subtract=(size_diff < 0))
+            
+            logger.info(f"Video processing completed for {file_obj.name}. {message}")
         else:
             logger.error(f"Video processing failed for {file_obj.name}: {message}")
+            if os.path.exists(temp_output_path):
+                os.remove(temp_output_path)
             
     except Exception as e:
         logger.error(f"Video background processing error: {e}", exc_info=True)
+        
+        temp_files = [
+            f for f in os.listdir(os.path.dirname(original_file_path)) 
+            if f.endswith('_converting.mp4')
+        ]
+        for temp_file in temp_files:
+            try:
+                os.remove(os.path.join(os.path.dirname(original_file_path), temp_file))
+            except:
+                pass
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization:

@@ -18,24 +18,18 @@ interface VideoProcessingStatus {
   video_processing_available: boolean;
 }
 
-function BasicVideoPlayer({ fileId, fileName, fileSize }: { fileId: string; fileName: string; fileSize: number }) {
+interface PreviewContentProps {
+  data: any;
+  contentType: string;
+  fileId: string;
+  fileName: string;
+  zoom?: number;
+  rotation?: number;
+}
+
+function BasicVideoPlayer({ previewData, fileName, fileSize }: { previewData: any; fileName: string; fileSize: number }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [retryMethod, setRetryMethod] = useState<'token' | 'direct' | 'auth'>('token');
-  const token = localStorage.getItem('token');
-
-  const getVideoUrl = () => {
-    switch (retryMethod) {
-      case 'token':
-        return `http://localhost:8000/media-preview/video/${fileId}/stream/?token=${token}`;
-      case 'direct':
-        return `http://localhost:8000/media-preview/video/${fileId}/stream/`;
-      case 'auth':
-        return `http://localhost:8000/media-preview/video/${fileId}/stream/`;
-      default:
-        return `http://localhost:8000/media-preview/video/${fileId}/stream/?token=${token}`;
-    }
-  };
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -50,61 +44,9 @@ function BasicVideoPlayer({ fileId, fileName, fileSize }: { fileId: string; file
   };
 
   const handleVideoError = () => {
-    setError('Failed to load video with current method');
+    setError('Failed to load video');
     setIsLoading(false);
   };
-
-  const retryWithMethod = (method: 'token' | 'direct' | 'auth') => {
-    setRetryMethod(method);
-    setIsLoading(true);
-    setError('');
-  };
-
-  const createVideoElement = () => {
-    const videoProps: any = {
-      className: "w-full h-auto",
-      controls: true,
-      preload: "metadata",
-      onLoadedData: handleVideoLoad,
-      onError: handleVideoError,
-      playsInline: true
-    };
-
-    if (retryMethod === 'auth') {
-      return (
-        <video {...videoProps}>
-          <source src={getVideoUrl()} type="video/mp4" />
-          <source src={getVideoUrl()} type="video/quicktime" />
-          <source src={getVideoUrl()} type="video/x-msvideo" />
-          Your browser does not support the video tag.
-        </video>
-      );
-    } else {
-      return <video {...videoProps} src={getVideoUrl()} />;
-    }
-  };
-
-  useEffect(() => {
-    if (retryMethod === 'auth') {
-      const video = document.querySelector('video');
-      if (video && token) {
-        fetch(getVideoUrl(), {
-          method: 'HEAD',
-          headers: { 'Authorization': `Bearer ${token}` }
-        }).then(response => {
-          if (response.ok) {
-            setIsLoading(false);
-          } else {
-            setError('Authorization failed');
-            setIsLoading(false);
-          }
-        }).catch(() => {
-          setError('Network error');
-          setIsLoading(false);
-        });
-      }
-    }
-  }, [retryMethod, token]);
 
   return (
     <div className="bg-black rounded-lg overflow-hidden w-full max-w-4xl relative">
@@ -114,7 +56,6 @@ function BasicVideoPlayer({ fileId, fileName, fileSize }: { fileId: string; file
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
             <p>Loading video...</p>
             <p className="text-sm text-gray-400 mt-2">{formatFileSize(fileSize)}</p>
-            <p className="text-xs text-gray-500 mt-1">Method: {retryMethod}</p>
           </div>
         </div>
       )}
@@ -127,31 +68,19 @@ function BasicVideoPlayer({ fileId, fileName, fileSize }: { fileId: string; file
           <div className="text-sm text-gray-400 mb-6">
             <p>File: {fileName}</p>
             <p>Size: {formatFileSize(fileSize)}</p>
-            <p>Current method: {retryMethod}</p>
-          </div>
-          <div className="space-x-2">
-            <button
-              onClick={() => retryWithMethod('token')}
-              className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-            >
-              Token URL
-            </button>
-            <button
-              onClick={() => retryWithMethod('direct')}
-              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-            >
-              Direct Stream
-            </button>
-            <button
-              onClick={() => retryWithMethod('auth')}
-              className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
-            >
-              Auth Header
-            </button>
+            <p>URL: {previewData.stream_url}</p>
           </div>
         </div>
       ) : (
-        createVideoElement()
+        <video
+          className="w-full h-auto"
+          controls
+          preload="metadata"
+          onLoadedData={handleVideoLoad}
+          onError={handleVideoError}
+          playsInline
+          src={previewData.stream_url}
+        />
       )}
       
       <div className="p-4 bg-gray-900 text-white">
@@ -160,8 +89,208 @@ function BasicVideoPlayer({ fileId, fileName, fileSize }: { fileId: string; file
           <span className="text-xs text-gray-400">{formatFileSize(fileSize)}</span>
         </div>
         <div className="text-xs text-gray-500 mt-1">
-          Stream: {getVideoUrl()}
+          Stream: {previewData.stream_url}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotation = 0 }: PreviewContentProps) {
+  const [processingStatus, setProcessingStatus] = useState<VideoProcessingStatus | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
+  const checkVideoProcessingStatus = async () => {
+    if (!contentType.startsWith('video/')) return;
+    
+    setIsCheckingStatus(true);
+    try {
+      const response = await fetch(`http://localhost:8001/api/video/processing-status/${fileId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const status = await response.json();
+        setProcessingStatus(status);
+        
+        if (status.processing) {
+          setTimeout(checkVideoProcessingStatus, 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check processing status:', error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    checkVideoProcessingStatus();
+  }, [fileId, contentType]);
+
+  if (contentType.startsWith('image/')) {
+    return (
+      <div className="h-full flex flex-col">
+        {data.width && (
+          <div className="p-3 border-b border-gray-200 bg-gray-50">
+            <div className="text-sm text-gray-600">
+              {data.width}×{data.height} • {data.format} • {data.mode}
+            </div>
+          </div>
+        )}
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100">
+          <img
+            src={`http://localhost:8000/media-preview/preview/${fileId}/preview/?size=800`}
+            alt="Preview"
+            className="max-w-full max-h-full object-contain"
+            style={{
+              transform: `scale(${zoom}) rotate(${rotation}deg)`,
+              transition: 'transform 0.2s ease'
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (contentType.startsWith('video/')) {
+    const fileSize = data.size || 0;
+    
+    return (
+      <div className="h-full flex flex-col">
+        {processingStatus && (
+          <div className={`p-3 border-b flex items-center space-x-2 ${
+            processingStatus.processing 
+              ? 'bg-yellow-50 border-yellow-200' 
+              : 'bg-green-50 border-green-200'
+          }`}>
+            {processingStatus.processing ? (
+              <>
+                <Video className="w-4 h-4 text-yellow-600 animate-pulse" />
+                <span className="text-sm text-yellow-800">
+                  Converting to H.264 for optimal playback...
+                </span>
+                {isCheckingStatus && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-yellow-600"></div>
+                )}
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-800">
+                  Video optimized for web playback
+                </span>
+              </>
+            )}
+          </div>
+        )}
+        
+        {processingStatus && !processingStatus.video_processing_available && (
+          <div className="p-3 border-b bg-orange-50 border-orange-200 flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-orange-600" />
+            <span className="text-sm text-orange-800">
+              Video processing unavailable. Original format will be used.
+            </span>
+          </div>
+        )}
+
+        <div className="flex-1 flex items-center justify-center bg-black p-4">
+          {processingStatus?.processing ? (
+            <div className="text-center text-white">
+              <Video className="w-16 h-16 mx-auto mb-4 text-yellow-400 animate-pulse" />
+              <h3 className="text-lg font-medium mb-2">Converting Video</h3>
+              <p className="text-gray-300 mb-4">
+                Converting to H.264 for optimal web playback...
+              </p>
+              <div className="w-64 bg-gray-700 rounded-full h-2 mx-auto">
+                <div className="bg-yellow-400 h-2 rounded-full animate-pulse w-full"></div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                This may take a few minutes depending on file size
+              </p>
+            </div>
+          ) : (
+            <BasicVideoPlayer 
+              previewData={data}
+              fileName={fileName} 
+              fileSize={fileSize} 
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (contentType.startsWith('audio/')) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center max-w-md w-full p-8">
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Volume2 className="w-16 h-16 text-white" />
+          </div>
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <audio
+              controls
+              className="w-full"
+              src={data.stream_url}
+              preload="metadata"
+            >
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.type === 'text') {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="p-3 border-b border-gray-200 bg-gray-50">
+          <div className="text-sm text-gray-600">
+            {data.lines.toLocaleString()} lines {data.truncated && '(truncated)'}
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto">
+          <pre className="p-4 text-sm font-mono whitespace-pre-wrap leading-relaxed">{data.content}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.type === 'pdf') {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-2xl font-bold">PDF</span>
+          </div>
+          <p className="text-gray-600 mb-4">{data.message}</p>
+          <p className="text-sm text-gray-400 mb-4">File size: {(data.size / (1024 * 1024)).toFixed(2)} MB</p>
+          <button 
+            onClick={() => window.open(data.download_url, '_blank')}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center mx-auto"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download PDF
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-center">
+        <div className="bg-gray-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
+          <span className="text-gray-500 text-xs font-medium">
+            {contentType.split('/')[1]?.toUpperCase() || 'FILE'}
+          </span>
+        </div>
+        <p className="text-gray-500 mb-2">Preview not available for this file type</p>
+        <p className="text-sm text-gray-400">{contentType}</p>
       </div>
     </div>
   );
@@ -333,218 +462,6 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
             />
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-interface PreviewContentProps {
-  data: any;
-  contentType: string;
-  fileId: string;
-  fileName: string;
-  zoom?: number;
-  rotation?: number;
-}
-
-function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotation = 0 }: PreviewContentProps) {
-  const [processingStatus, setProcessingStatus] = useState<VideoProcessingStatus | null>(null);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
-
-  const checkVideoProcessingStatus = async () => {
-    if (!contentType.startsWith('video/')) return;
-    
-    setIsCheckingStatus(true);
-    try {
-      const response = await fetch(`http://localhost:8001/api/video/processing-status/${fileId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const status = await response.json();
-        setProcessingStatus(status);
-        
-        if (status.processing) {
-          setTimeout(checkVideoProcessingStatus, 3000);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check processing status:', error);
-    } finally {
-      setIsCheckingStatus(false);
-    }
-  };
-
-  useEffect(() => {
-    checkVideoProcessingStatus();
-  }, [fileId, contentType]);
-
-  if (contentType.startsWith('image/')) {
-    return (
-      <div className="h-full flex flex-col">
-        {data.width && (
-          <div className="p-3 border-b border-gray-200 bg-gray-50">
-            <div className="text-sm text-gray-600">
-              {data.width}×{data.height} • {data.format} • {data.mode}
-            </div>
-          </div>
-        )}
-        <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100">
-          <img
-            src={`http://localhost:8000/media-preview/preview/${fileId}/preview/?size=800`}
-            alt="Preview"
-            className="max-w-full max-h-full object-contain"
-            style={{
-              transform: `scale(${zoom}) rotate(${rotation}deg)`,
-              transition: 'transform 0.2s ease'
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (contentType.startsWith('video/')) {
-    const fileSize = data.size || 0;
-    
-    return (
-      <div className="h-full flex flex-col">
-        {processingStatus && (
-          <div className={`p-3 border-b flex items-center space-x-2 ${
-            processingStatus.processing 
-              ? 'bg-yellow-50 border-yellow-200' 
-              : 'bg-green-50 border-green-200'
-          }`}>
-            {processingStatus.processing ? (
-              <>
-                <Video className="w-4 h-4 text-yellow-600 animate-pulse" />
-                <span className="text-sm text-yellow-800">
-                  Converting to H.264 for optimal playback...
-                </span>
-                {isCheckingStatus && (
-                  <div className="animate-spin rounded-full h-3 w-3 border-b border-yellow-600"></div>
-                )}
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-green-800">
-                  Video optimized for web playback
-                </span>
-              </>
-            )}
-          </div>
-        )}
-        
-        {processingStatus && !processingStatus.video_processing_available && (
-          <div className="p-3 border-b bg-orange-50 border-orange-200 flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-orange-600" />
-            <span className="text-sm text-orange-800">
-              Video processing unavailable. Original format will be used.
-            </span>
-          </div>
-        )}
-
-        <div className="flex-1 flex items-center justify-center bg-black p-4">
-          {processingStatus?.processing ? (
-            <div className="text-center text-white">
-              <Video className="w-16 h-16 mx-auto mb-4 text-yellow-400 animate-pulse" />
-              <h3 className="text-lg font-medium mb-2">Converting Video</h3>
-              <p className="text-gray-300 mb-4">
-                Converting to H.264 for optimal web playback...
-              </p>
-              <div className="w-64 bg-gray-700 rounded-full h-2 mx-auto">
-                <div className="bg-yellow-400 h-2 rounded-full animate-pulse w-full"></div>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                This may take a few minutes depending on file size
-              </p>
-            </div>
-          ) : (
-            <BasicVideoPlayer 
-              fileId={fileId} 
-              fileName={fileName} 
-              fileSize={fileSize} 
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (contentType.startsWith('audio/')) {
-    const token = localStorage.getItem('token');
-    const audioUrl = `http://localhost:8000/media-preview/video/${fileId}/stream/?token=${token}`;
-    
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center max-w-md w-full p-8">
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Volume2 className="w-16 h-16 text-white" />
-          </div>
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <audio
-              controls
-              className="w-full"
-              src={audioUrl}
-              preload="metadata"
-            >
-              Your browser does not support audio playback.
-            </audio>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (data.type === 'text') {
-    return (
-      <div className="h-full flex flex-col">
-        <div className="p-3 border-b border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-600">
-            {data.lines.toLocaleString()} lines {data.truncated && '(truncated)'}
-          </div>
-        </div>
-        <div className="flex-1 overflow-auto">
-          <pre className="p-4 text-sm font-mono whitespace-pre-wrap leading-relaxed">{data.content}</pre>
-        </div>
-      </div>
-    );
-  }
-
-  if (data.type === 'pdf') {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-600 text-2xl font-bold">PDF</span>
-          </div>
-          <p className="text-gray-600 mb-4">{data.message}</p>
-          <p className="text-sm text-gray-400 mb-4">File size: {(data.size / (1024 * 1024)).toFixed(2)} MB</p>
-          <button 
-            onClick={() => window.open(data.download_url, '_blank')}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center mx-auto"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full flex items-center justify-center">
-      <div className="text-center">
-        <div className="bg-gray-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
-          <span className="text-gray-500 text-xs font-medium">
-            {contentType.split('/')[1]?.toUpperCase() || 'FILE'}
-          </span>
-        </div>
-        <p className="text-gray-500 mb-2">Preview not available for this file type</p>
-        <p className="text-sm text-gray-400">{contentType}</p>
       </div>
     </div>
   );
