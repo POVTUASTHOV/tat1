@@ -99,6 +99,7 @@ function BasicVideoPlayer({ previewData, fileName, fileSize }: { previewData: an
 function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotation = 0 }: PreviewContentProps) {
   const [processingStatus, setProcessingStatus] = useState<VideoProcessingStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>('');
 
   const checkVideoProcessingStatus = async () => {
     if (!contentType.startsWith('video/')) return;
@@ -126,16 +127,40 @@ function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotatio
     }
   };
 
+  const loadImageUrl = async () => {
+    if (!contentType.startsWith('image/')) return;
+    
+    try {
+      const thumbnailResponse = await fetch(`http://localhost:8000/media-preview/preview/${fileId}/thumbnail/?size=800`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (thumbnailResponse.ok) {
+        const blob = await thumbnailResponse.blob();
+        const url = URL.createObjectURL(blob);
+        setImageUrl(url);
+      } else {
+        setImageUrl(data.direct_url);
+      }
+    } catch (error) {
+      setImageUrl(data.direct_url);
+    }
+  };
+
   useEffect(() => {
     checkVideoProcessingStatus();
+    loadImageUrl();
+    
+    return () => {
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
   }, [fileId, contentType]);
 
   if (contentType.startsWith('image/')) {
-    const [imageError, setImageError] = useState(false);
-    const imageUrl = imageError 
-      ? data.direct_url 
-      : data.thumbnail_url ? `http://localhost:8000${data.thumbnail_url}?size=800` : data.direct_url;
-    
     return (
       <div className="h-full flex flex-col">
         {data.width && (
@@ -146,16 +171,22 @@ function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotatio
           </div>
         )}
         <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100">
-          <img
-            src={imageUrl}
-            alt="Preview"
-            className="max-w-full max-h-full object-contain"
-            style={{
-              transform: `scale(${zoom}) rotate(${rotation}deg)`,
-              transition: 'transform 0.2s ease'
-            }}
-            onError={() => setImageError(true)}
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Preview"
+              className="max-w-full max-h-full object-contain"
+              style={{
+                transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                transition: 'transform 0.2s ease'
+              }}
+              onError={() => setImageUrl(data.direct_url)}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -327,19 +358,40 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
     
     try {
       const token = localStorage.getItem('token');
+      console.log('Loading preview for fileId:', fileId);
+      console.log('Using token:', token ? 'Token present' : 'No token');
+      
       const response = await fetch(`http://localhost:8000/media-preview/preview/${fileId}/preview/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`Preview failed with status: ${response.status}`);
+        const errorText = await response.text();
+        console.log('Error response body:', errorText);
+        throw new Error(`Preview failed with status: ${response.status} - ${errorText.substring(0, 200)}`);
       }
 
-      const data = await response.json();
-      setPreviewData(data);
+      const responseText = await response.text();
+      console.log('Raw response:', responseText.substring(0, 500));
+
+      try {
+        const data = JSON.parse(responseText);
+        console.log('Parsed JSON data:', data);
+        setPreviewData(data);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.log('Response that failed to parse:', responseText);
+        throw new Error(`Invalid JSON response. Response: ${responseText.substring(0, 100)}`);
+      }
     } catch (error) {
+      console.error('Preview error:', error);
       setError(error instanceof Error ? error.message : 'Preview failed');
     } finally {
       setIsLoading(false);
@@ -445,13 +497,29 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
 
           {error && (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <p className="text-red-600 mb-4">{error}</p>
+              <div className="text-center max-w-2xl mx-4">
+                <h3 className="text-lg font-medium text-red-600 mb-4">Preview Error</h3>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <pre className="text-sm text-red-800 whitespace-pre-wrap text-left overflow-auto max-h-60">
+                    {error}
+                  </pre>
+                </div>
+                <div className="text-sm text-gray-600 mb-4">
+                  <p>File ID: {fileId}</p>
+                  <p>File Name: {fileName}</p>
+                  <p>Content Type: {contentType}</p>
+                </div>
                 <button 
                   onClick={loadPreview}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mr-2"
                 >
                   Try Again
+                </button>
+                <button 
+                  onClick={handleDownload}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Download File
                 </button>
               </div>
             </div>

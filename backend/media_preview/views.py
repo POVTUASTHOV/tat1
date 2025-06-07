@@ -46,15 +46,15 @@ class FilePreviewViewSet(viewsets.ViewSet):
             elif content_type == 'application/pdf':
                 return self._preview_pdf(file_obj, request)
             else:
-                return Response({'error': 'Preview not supported for this file type'}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'error': 'Preview not supported for this file type'}, 
+                              status=400)
                 
         except DjangoFile.DoesNotExist:
             raise Http404("File not found")
         except Exception as e:
             logger.error(f"Preview error for file {pk}: {str(e)}")
-            return Response({'error': f'Preview failed: {str(e)}'}, 
-                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return JsonResponse({'error': f'Preview failed: {str(e)}'}, 
+                          status=500)
 
     def _preview_image(self, file_obj, request):
         try:
@@ -66,7 +66,7 @@ class FilePreviewViewSet(viewsets.ViewSet):
                 thumbnail_url = f'/media-preview/preview/{file_obj.id}/thumbnail/'
                 direct_url = f'http://localhost:3001/media/{file_obj.file.name}'
                 
-                return JsonResponse({
+                response_data = {
                     'type': 'image',
                     'width': width,
                     'height': height,
@@ -76,17 +76,67 @@ class FilePreviewViewSet(viewsets.ViewSet):
                     'content_type': file_obj.content_type,
                     'thumbnail_url': thumbnail_url,
                     'direct_url': direct_url
-                })
-                    
+                }
+                
+                response = JsonResponse(response_data)
+                response['Content-Type'] = 'application/json'
+                return response
+                        
         except Exception as e:
             logger.error(f"Image preview error: {str(e)}")
-            return JsonResponse({
+            fallback_data = {
                 'type': 'image',
                 'error': f'Image preview failed: {str(e)}',
                 'direct_url': f'http://localhost:3001/media/{file_obj.file.name}',
                 'size': file_obj.size,
                 'content_type': file_obj.content_type
-            })
+            }
+            response = JsonResponse(fallback_data)
+            response['Content-Type'] = 'application/json'
+            return response
+
+    @action(detail=True, methods=['get'])
+    def thumbnail(self, request, pk=None):
+        try:
+            file_obj = DjangoFile.objects.get(id=pk, user=request.user)
+            
+            if not os.path.exists(file_obj.file.path):
+                raise Http404("File not found on server")
+            
+            thumbnail_size = request.GET.get('size', '300')
+            if thumbnail_size not in ['150', '300', '600', '800']:
+                thumbnail_size = '300'
+                
+            with Image.open(file_obj.file.path) as img:
+                thumb_size = int(thumbnail_size)
+                img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
+                
+                buffer = BytesIO()
+                img_format = img.format or 'JPEG'
+                if img_format.upper() in ['JPEG', 'JPG']:
+                    img.save(buffer, format='JPEG', quality=85)
+                    content_type = 'image/jpeg'
+                elif img_format.upper() == 'PNG':
+                    img.save(buffer, format='PNG')
+                    content_type = 'image/png'
+                else:
+                    img = img.convert('RGB')
+                    img.save(buffer, format='JPEG', quality=85)
+                    content_type = 'image/jpeg'
+                
+                buffer.seek(0)
+                
+                response = HttpResponse(buffer.getvalue(), content_type=content_type)
+                response['Cache-Control'] = 'public, max-age=3600'
+                response['Access-Control-Allow-Origin'] = '*'
+                response['Content-Length'] = str(len(buffer.getvalue()))
+                return response
+                
+        except DjangoFile.DoesNotExist:
+            raise Http404("File not found")
+        except Exception as e:
+            logger.error(f"Thumbnail error: {str(e)}")
+            raise Http404("Thumbnail generation failed")
 
     @action(detail=True, methods=['get'])
     def thumbnail(self, request, pk=None):
@@ -128,6 +178,21 @@ class FilePreviewViewSet(viewsets.ViewSet):
             raise Http404("File not found")
         except Exception as e:
             logger.error(f"Thumbnail error: {str(e)}")
+            
+            file_obj = DjangoFile.objects.get(id=pk, user=request.user)
+            direct_url = f'http://localhost:3001/media/{file_obj.file.name}'
+            
+            try:
+                import requests
+                img_response = requests.get(direct_url, timeout=10)
+                if img_response.status_code == 200:
+                    response = HttpResponse(img_response.content, content_type=img_response.headers.get('Content-Type', 'image/jpeg'))
+                    response['Cache-Control'] = 'public, max-age=3600'
+                    response['Access-Control-Allow-Origin'] = '*'
+                    return response
+            except:
+                pass
+                
             raise Http404("Thumbnail generation failed")
 
     def _preview_video(self, file_obj, request):
@@ -162,8 +227,8 @@ class FilePreviewViewSet(viewsets.ViewSet):
         try:
             max_size = 1024 * 1024
             if file_obj.size > max_size:
-                return Response({'error': 'File too large for text preview'}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'error': 'File too large for text preview'}, 
+                              status=400)
             
             with open(file_obj.file.path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
@@ -180,8 +245,8 @@ class FilePreviewViewSet(viewsets.ViewSet):
             })
             
         except Exception as e:
-            return Response({'error': f'Text preview failed: {str(e)}'}, 
-                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return JsonResponse({'error': f'Text preview failed: {str(e)}'}, 
+                          status=500)
 
     def _preview_pdf(self, file_obj, request):
         return JsonResponse({
@@ -191,6 +256,16 @@ class FilePreviewViewSet(viewsets.ViewSet):
             'download_url': f'/file-management/files/{file_obj.id}/download/',
             'message': 'PDF preview requires download'
         })
+
+    def _format_file_size(self, bytes_size):
+        if bytes_size == 0:
+            return "0 Bytes"
+        size_names = ["Bytes", "KB", "MB", "GB", "TB"]
+        i = 0
+        while bytes_size >= 1024 and i < len(size_names) - 1:
+            bytes_size /= 1024
+            i += 1
+        return f"{bytes_size:.2f} {size_names[i]}"
 
     def _format_file_size(self, bytes_size):
         if bytes_size == 0:
