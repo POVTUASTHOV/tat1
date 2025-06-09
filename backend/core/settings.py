@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'storage',
     'file_management',
     'media_preview',
+    'workflow_management',
 ]
 
 MIDDLEWARE = [

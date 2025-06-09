@@ -22,6 +22,7 @@ urlpatterns = [
     path('storage/', include('storage.urls')),
     path('file-management/', include('file_management.urls')),
     path('media-preview/', include('media_preview.urls')),
+    path('workflow/', include('workflow_management.urls')),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
 

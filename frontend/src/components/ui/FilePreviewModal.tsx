@@ -532,12 +532,24 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
   useEffect(() => {
     if (isOpen && fileId) {
       loadPreview();
+      document.body.style.overflow = 'hidden';
+      
+      const header = document.querySelector('header');
+      if (header) {
+        header.style.display = 'none';
+      }
     }
     
     return () => {
       setImageZoom(1);
       setImageRotation(0);
       setIsFullscreen(false);
+      document.body.style.overflow = 'unset';
+      
+      const header = document.querySelector('header');
+      if (header) {
+        header.style.display = '';
+      }
     };
   }, [isOpen, fileId, loadPreview]);
 
@@ -572,8 +584,8 @@ export default function FilePreviewModal({ isOpen, onClose, fileId, fileName, co
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 ${
-      isFullscreen ? 'p-0' : 'p-4'
+    <div className={`fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center ${
+      isFullscreen ? 'p-0 z-[9999]' : 'p-4 z-[9999]'
     }`}>
       <div className={`bg-white flex flex-col ${
         isFullscreen 
