@@ -7,6 +7,7 @@ import { apiService } from '../../lib/api';
 import { AssignmentBatch, Assignment, ProjectAnalytics } from '../../types/workflow';
 import { Project } from '../../types';
 import { formatDate } from '../../lib/utils';
+import UserRoleDebug from '../../components/debug/UserRoleDebug';
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -347,6 +348,9 @@ export default function DashboardPage() {
           <p className="text-gray-500">Choose a project from the dropdown to view workflow data</p>
         </div>
       )}
+      
+      {/* Debug component - remove in production */}
+      <UserRoleDebug />
     </div>
   );
 }

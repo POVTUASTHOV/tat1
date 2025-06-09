@@ -9,8 +9,9 @@ from typing import List, Dict, Optional
 import logging
 from .models import (
     FilePair, AssignmentBatch, Assignment, AssignmentFile, 
-    UserProfile, ActivityLog, Role, UserRole
+    UserProfile, ActivityLog
 )
+from users.models import WorkflowRole, ProjectAssignment
 from storage.models import File, Project
 from users.models import User
 
@@ -386,6 +387,7 @@ class WorkloadAnalyticsService:
             for assignment in completed_assignments
         )
         
+        from django.db import models
         avg_quality_score = completed_assignments.aggregate(
             avg_quality=models.Avg('quality_score')
         )['avg_quality'] or 0
@@ -470,13 +472,13 @@ class RoleManagementService:
     
     @staticmethod
     def assign_user_role(user: User, role_name: str, project: Project = None, 
-                        assigned_by: User = None) -> UserRole:
+                        assigned_by: User = None) -> ProjectAssignment:
         """Assign role to user"""
         
-        role = Role.objects.get(name=role_name)
+        role = WorkflowRole.objects.get(name=role_name)
         
         # Check if assignment already exists
-        existing = UserRole.objects.filter(
+        existing = ProjectAssignment.objects.filter(
             user=user,
             role=role,
             project=project,
@@ -486,7 +488,7 @@ class RoleManagementService:
         if existing:
             return existing
         
-        user_role = UserRole.objects.create(
+        user_role = ProjectAssignment.objects.create(
             user=user,
             role=role,
             project=project,
@@ -512,12 +514,13 @@ class RoleManagementService:
     def get_user_permissions(user: User, project: Project = None) -> Dict:
         """Get user permissions for a project or globally"""
         
-        user_roles = UserRole.objects.filter(
+        user_roles = ProjectAssignment.objects.filter(
             user=user,
             is_active=True
         )
         
         if project:
+            from django.db import models
             user_roles = user_roles.filter(
                 models.Q(project=project) | models.Q(project__isnull=True)
             )
@@ -534,7 +537,7 @@ class RoleManagementService:
         return {
             'roles': roles,
             'permissions': list(permissions),
-            'is_admin': Role.ADMIN in roles,
-            'is_manager': Role.MANAGER in roles,
-            'is_employee': Role.EMPLOYEE in roles
+            'is_admin': WorkflowRole.ADMIN in roles,
+            'is_manager': WorkflowRole.MANAGER in roles,
+            'is_employee': WorkflowRole.EMPLOYEE in roles
         }

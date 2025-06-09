@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from workflow_management.models import Role, UserRole, UserProfile
+from workflow_management.models import UserProfile
+from users.models import WorkflowRole, ProjectAssignment
 from storage.models import Project, File
 from workflow_management.services import FilePairingService, RoleManagementService
 
@@ -53,7 +54,7 @@ class Command(BaseCommand):
         ]
 
         for role_data in roles_data:
-            role, created = Role.objects.get_or_create(
+            role, created = WorkflowRole.objects.get_or_create(
                 name=role_data['name'],
                 defaults={
                     'description': role_data['description'],
@@ -65,11 +66,11 @@ class Command(BaseCommand):
 
     def assign_user_roles(self):
         users = User.objects.all()
-        admin_role = Role.objects.get(name='admin')
+        admin_role = WorkflowRole.objects.get(name='admin')
         
         for user in users:
             if user.is_superuser:
-                user_role, created = UserRole.objects.get_or_create(
+                user_role, created = ProjectAssignment.objects.get_or_create(
                     user=user,
                     role=admin_role,
                     project=None,

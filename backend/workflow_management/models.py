@@ -7,38 +7,6 @@ import json
 from users.models import User
 from storage.models import Project, File
 
-class Role(models.Model):
-    ADMIN = 'admin'
-    MANAGER = 'manager'
-    EMPLOYEE = 'employee'
-    
-    ROLE_CHOICES = [
-        (ADMIN, 'Admin'),
-        (MANAGER, 'Manager'),
-        (EMPLOYEE, 'Employee'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=50, choices=ROLE_CHOICES, unique=True)
-    description = models.TextField(blank=True)
-    permissions = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return self.get_name_display()
-
-class UserRole(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles')
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='user_assignments')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='role_assignments', null=True, blank=True)
-    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assigned_roles')
-    assigned_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
-    
-    class Meta:
-        unique_together = ['user', 'role', 'project']
-
 class FilePair(models.Model):
     PENDING = 'pending'
     PAIRED = 'paired'
@@ -260,7 +228,7 @@ class FileWorkflow(models.Model):
 
 class ActivityLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workflow_activity_logs')
     action = models.CharField(max_length=100)
     resource_type = models.CharField(max_length=50)
     resource_id = models.UUIDField()

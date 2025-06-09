@@ -1,26 +1,26 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import (
-    Role, UserRole, FilePair, AssignmentBatch, Assignment, 
+    FilePair, AssignmentBatch, Assignment, 
     AssignmentFile, UserProfile, FileWorkflow, ActivityLog, WorkloadSnapshot
 )
+from users.models import WorkflowRole, ProjectAssignment
 from users.serializers import UserSerializer
 from storage.serializers import FileSerializer, ProjectSerializer
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Role
+        model = WorkflowRole
         fields = ['id', 'name', 'description', 'permissions', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 class UserRoleSerializer(serializers.ModelSerializer):
-    role_name = serializers.CharField(source='role.name', read_only=True)
     project_name = serializers.CharField(source='project.name', read_only=True)
     assigned_by_name = serializers.CharField(source='assigned_by.username', read_only=True)
     
     class Meta:
-        model = UserRole
-        fields = ['id', 'user', 'role', 'role_name', 'project', 'project_name', 
+        model = ProjectAssignment
+        fields = ['id', 'user', 'project', 'project_name', 
                  'assigned_by', 'assigned_by_name', 'assigned_at', 'is_active']
         read_only_fields = ['id', 'assigned_at']
 

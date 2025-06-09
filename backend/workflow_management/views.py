@@ -11,9 +11,10 @@ import os
 import logging
 
 from .models import (
-    Role, UserRole, FilePair, AssignmentBatch, Assignment, 
+    FilePair, AssignmentBatch, Assignment, 
     AssignmentFile, UserProfile, FileWorkflow, ActivityLog, WorkloadSnapshot
 )
+from users.models import WorkflowRole, ProjectAssignment
 from .serializers import (
     RoleSerializer, UserRoleSerializer, FilePairSerializer, AssignmentBatchSerializer,
     AssignmentSerializer, UserProfileSerializer, FileWorkflowSerializer, 
@@ -38,14 +39,14 @@ class RoleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOnly]
     
     def get_queryset(self):
-        return Role.objects.all()
+        return WorkflowRole.objects.all()
 
 class UserRoleViewSet(viewsets.ModelViewSet):
     serializer_class = UserRoleSerializer
     permission_classes = [IsManagerOrAdmin]
     
     def get_queryset(self):
-        queryset = UserRole.objects.all()
+        queryset = ProjectAssignment.objects.all()
         
         # Filter by project if user is not admin
         if not self.request.user.is_staff:
@@ -78,7 +79,7 @@ class UserRoleViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(user_role)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
             
-        except (User.DoesNotExist, Project.DoesNotExist, Role.DoesNotExist) as e:
+        except (User.DoesNotExist, Project.DoesNotExist, WorkflowRole.DoesNotExist) as e:
             return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=True, methods=['post'])
@@ -312,7 +313,7 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_staff:
             # Employees see only their assignments
             # Managers see assignments in their projects
-            user_roles = UserRole.objects.filter(
+            user_roles = ProjectAssignment.objects.filter(
                 user=self.request.user, 
                 is_active=True
             ).values_list('role__name', flat=True)
