@@ -8,7 +8,11 @@ import {
   Files, 
   Upload, 
   BarChart3, 
-  Settings 
+  Settings,
+  Users,
+  Briefcase,
+  Target,
+  Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -17,6 +21,10 @@ const navigation = [
   { name: 'Projects', href: '/dashboard/projects', icon: FolderOpen },
   { name: 'All Files', href: '/dashboard/files', icon: Files },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+  { name: 'Workflow', href: '/dashboard/workflow', icon: Briefcase },
+  { name: 'Assignments', href: '/dashboard/assignments', icon: Target },
+  { name: 'Team', href: '/dashboard/team', icon: Users },
+  { name: 'Activity', href: '/dashboard/activity', icon: Activity },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

@@ -1,34 +1,111 @@
-// frontend/src/app/dashboard/page.tsx - Thêm GPU Status Widget
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HardDrive, FileText, Folder, Upload } from 'lucide-react';
-import { apiService } from '../../lib/api';
-import { useAuth } from '../../hooks/useAuth';
-import { StorageStats } from '../../types';
-import { formatFileSize } from '../../lib/utils';
-import GpuStatusWidget from '../../components/ui/GpuStatusWidget'; // Add this import
+import { Plus, Users, Target, BarChart3, Activity, Search, Filter, AlertCircle } from 'lucide-react';
+import Button from '../../../components/ui/Button';
+import { apiService } from '../../../lib/api';
+import { AssignmentBatch, Assignment, ProjectAnalytics } from '../../../types/workflow';
+import { Project } from '../../../types';
+import { formatDate } from '../../../lib/utils';
 
-export default function DashboardPage() {
-  const { user } = useAuth();
-  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
+export default function WorkflowPage() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [batches, setBatches] = useState<AssignmentBatch[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    loadStorageStats();
+    loadInitialData();
   }, []);
 
-  const loadStorageStats = async () => {
+  useEffect(() => {
+    if (selectedProject) {
+      loadProjectData();
+    } else {
+      setBatches([]);
+      setAssignments([]);
+      setAnalytics(null);
+    }
+  }, [selectedProject]);
+
+  const loadInitialData = async () => {
     try {
-      const stats = await apiService.getStorageStats();
-      setStorageStats(stats);
+      setError('');
+      const projectsResponse = await apiService.getProjects();
+      setProjects(projectsResponse.projects);
+      
+      if (projectsResponse.projects.length > 0) {
+        setSelectedProject(projectsResponse.projects[0].id);
+      }
     } catch (error) {
-      console.error('Failed to load storage stats:', error);
+      console.error('Failed to load projects:', error);
+      setError('Failed to load projects');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const loadProjectData = async () => {
+    if (!selectedProject) return;
+
+    try {
+      setError('');
+      
+      const results = await Promise.allSettled([
+        apiService.getAssignmentBatches(selectedProject),
+        apiService.getAssignments({ project_id: selectedProject }),
+        apiService.getProjectOverview(selectedProject)
+      ]);
+
+      const [batchesResult, assignmentsResult, analyticsResult] = results;
+
+      if (batchesResult.status === 'fulfilled') {
+        setBatches(batchesResult.value);
+      } else {
+        console.error('Failed to load batches:', batchesResult.reason);
+      }
+
+      if (assignmentsResult.status === 'fulfilled') {
+        setAssignments(assignmentsResult.value);
+      } else {
+        console.error('Failed to load assignments:', assignmentsResult.reason);
+      }
+
+      if (analyticsResult.status === 'fulfilled') {
+        setAnalytics(analyticsResult.value);
+      } else {
+        console.error('Failed to load analytics:', analyticsResult.reason);
+      }
+
+      if (results.every(result => result.status === 'rejected')) {
+        setError('You do not have permission to access workflow data. Please contact an administrator.');
+      }
+    } catch (error) {
+      console.error('Failed to load project data:', error);
+      setError('Failed to load workflow data. Please check your permissions.');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'text-green-600 bg-green-100';
+      case 'active': return 'text-blue-600 bg-blue-100';
+      case 'in_progress': return 'text-yellow-600 bg-yellow-100';
+      case 'cancelled': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const tabs = [
+    { id: 'overview', name: 'Overview', icon: BarChart3 },
+    { id: 'batches', name: 'Batches', icon: Target },
+    { id: 'assignments', name: 'Assignments', icon: Users },
+    { id: 'activity', name: 'Activity', icon: Activity },
+  ];
 
   if (isLoading) {
     return (
@@ -38,186 +115,228 @@ export default function DashboardPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Workflow Management</h1>
+          <p className="text-gray-600 mt-1">Manage assignments, batches, and team workflow</p>
+        </div>
+        
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="w-6 h-6 text-red-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-red-900">Access Denied</h3>
+              <p className="text-red-700 mt-1">{error}</p>
+              <p className="text-red-600 text-sm mt-2">
+                You need workflow permissions to access this feature. Contact your administrator to:
+              </p>
+              <ul className="text-red-600 text-sm mt-2 ml-4 list-disc">
+                <li>Assign you a workflow role (admin, manager, or employee)</li>
+                <li>Grant you access to specific projects</li>
+                <li>Enable workflow permissions for your account</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user?.username}!
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Here's an overview of your storage and files.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Workflow Management</h1>
+          <p className="text-gray-600 mt-1">Manage assignments, batches, and team workflow</p>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select Project</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            New Batch
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      {storageStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Storage Used */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <HardDrive className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Storage Used</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {storageStats.storage.used_formatted}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">
-                  {storageStats.storage.percentage.toFixed(1)}% used
-                </span>
-                <span className="text-gray-600">
-                  {storageStats.storage.quota_formatted} total
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(storageStats.storage.percentage, 100)}%` }}
-                ></div>
-              </div>
-            </div>
+      {selectedProject && (
+        <div className="bg-white rounded-lg shadow">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
           </div>
 
-          {/* Total Files */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-3 rounded-lg">
-                <FileText className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Files</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {storageStats.overview.total_files.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
+          <div className="p-6">
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {analytics ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <div className="bg-blue-100 p-2 rounded-lg">
+                            <Target className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Total Batches</p>
+                            <p className="text-2xl font-bold text-gray-900">{analytics.total_batches}</p>
+                          </div>
+                        </div>
+                      </div>
 
-          {/* Total Folders */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="bg-yellow-100 p-3 rounded-lg">
-                <Folder className="w-6 h-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Folders</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {storageStats.overview.total_folders.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <div className="bg-green-100 p-2 rounded-lg">
+                            <Users className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Total Assignments</p>
+                            <p className="text-2xl font-bold text-gray-900">{analytics.total_assignments}</p>
+                          </div>
+                        </div>
+                      </div>
 
-          {/* Total Projects */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Upload className="w-6 h-6 text-purple-600" />
+                      <div className="bg-purple-50 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <div className="bg-purple-100 p-2 rounded-lg">
+                            <BarChart3 className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Completion Rate</p>
+                            <p className="text-2xl font-bold text-gray-900">{analytics.completion_rate.toFixed(1)}%</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-50 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <div className="bg-yellow-100 p-2 rounded-lg">
+                            <Activity className="w-6 h-6 text-yellow-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Avg Quality</p>
+                            <p className="text-2xl font-bold text-gray-900">{analytics.average_quality_score.toFixed(1)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No workflow data available</h3>
+                    <p className="text-gray-500">Create some batches and assignments to see analytics</p>
+                  </div>
+                )}
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Projects</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {storageStats.overview.total_projects.toLocaleString()}
-                </p>
+            )}
+
+            {activeTab === 'batches' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Assignment Batches</h3>
+                </div>
+
+                {batches.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {batches.map((batch) => (
+                      <div key={batch.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-900">{batch.name}</h4>
+                            <p className="text-sm text-gray-600">{batch.description}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(batch.status)}`}>
+                            {batch.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No batches found</h3>
+                    <p className="text-gray-500">Create your first assignment batch to get started</p>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {activeTab === 'assignments' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Assignments</h3>
+                
+                {assignments.length > 0 ? (
+                  <div className="space-y-3">
+                    {assignments.map((assignment) => (
+                      <div key={assignment.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{assignment.batch_name}</h4>
+                            <p className="text-sm text-gray-600">{assignment.user_name}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(assignment.status)}`}>
+                            {assignment.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No assignments found</h3>
+                    <p className="text-gray-500">Assignments will appear here once batches are created</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'activity' && (
+              <div className="text-center py-12">
+                <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No activity data</h3>
+                <p className="text-gray-500">Activity logs will appear here as work progresses</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* GPU Status Widget - Add this section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {/* Recent Projects - moved here */}
-          {storageStats?.projects && storageStats.projects.length > 0 && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Projects</h2>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {storageStats.projects.slice(0, 5).map((project) => (
-                    <div key={project.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-blue-100 p-2 rounded-lg">
-                          <Folder className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{project.name}</h3>
-                          <p className="text-sm text-gray-500">{project.description || 'No description'}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          {project.files_count} files
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {project.total_size_formatted}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* GPU Status Widget */}
-        <div>
-          <GpuStatusWidget className="mb-6" />
-          
-          {/* System Info */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">System Info</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Video Processing</span>
-                <span className="text-sm font-medium text-gray-900">Available</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Auto H.264 Conversion</span>
-                <span className="text-sm font-medium text-green-600">Enabled</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Upload Format Support</span>
-                <span className="text-sm font-medium text-gray-900">All formats</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* File Type Breakdown */}
-      {storageStats?.overview.file_types && Object.keys(storageStats.overview.file_types).length > 0 && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">File Types</h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(storageStats.overview.file_types).map(([type, data]) => (
-                <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900 capitalize">{type}</p>
-                    <p className="text-sm text-gray-500">{data.count} files</p>
-                    {type === 'video' && (
-                      <p className="text-xs text-blue-600">Auto-converted to H.264</p>
-                    )}
-                  </div>
-                  <p className="text-sm font-medium text-gray-700">
-                    {formatFileSize(data.size)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+      {!selectedProject && projects.length > 0 && (
+        <div className="text-center py-12">
+          <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Select a project</h3>
+          <p className="text-gray-500">Choose a project from the dropdown to view workflow data</p>
         </div>
       )}
     </div>

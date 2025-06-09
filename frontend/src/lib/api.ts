@@ -1,5 +1,6 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../constants/api';
 import { LoginCredentials, LoginResponse, StorageStats, Project, FileItem } from '../types';
+import { WorkflowRole, UserRole, FilePair, AssignmentBatch, Assignment, UserProfile, ProjectAnalytics, ActivityLog } from '../types/workflow';
 
 class ApiService {
   private token: string | null = null;
@@ -236,7 +237,6 @@ class ApiService {
         method: 'DELETE',
       });
     } catch (error) {
-      // Enhanced error handling for file deletion
       let errorMessage = error instanceof Error ? error.message : 'Failed to delete file';
       
       if (errorMessage.includes('Permission denied')) {
@@ -314,6 +314,268 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async getWorkflowRoles(): Promise<WorkflowRole[]> {
+    return this.request<WorkflowRole[]>(API_ENDPOINTS.WORKFLOW_ROLES);
+  }
+
+  async createWorkflowRole(data: Partial<WorkflowRole>): Promise<WorkflowRole> {
+    return this.request<WorkflowRole>(API_ENDPOINTS.WORKFLOW_ROLES, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserRoles(): Promise<UserRole[]> {
+    return this.request<UserRole[]>(API_ENDPOINTS.WORKFLOW_USER_ROLES);
+  }
+
+  async assignUserRole(data: {
+    user_id: string;
+    role_name: string;
+    project_id: string;
+  }): Promise<UserRole> {
+    return this.request<UserRole>(`${API_ENDPOINTS.WORKFLOW_USER_ROLES}assign_role/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFilePairs(projectId?: string): Promise<FilePair[]> {
+    let url = API_ENDPOINTS.WORKFLOW_FILE_PAIRS;
+    if (projectId) {
+      url += `?project_id=${projectId}`;
+    }
+    return this.request<FilePair[]>(url);
+  }
+
+  async autoCreateFilePairs(projectId: string, pairType: string = 'image_json'): Promise<{
+    pairs_created: number;
+    pairs: FilePair[];
+  }> {
+    return this.request<{ pairs_created: number; pairs: FilePair[] }>(
+      `${API_ENDPOINTS.WORKFLOW_FILE_PAIRS}auto_pair/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          project_id: projectId,
+          pair_type: pairType,
+        }),
+      }
+    );
+  }
+
+  async getAssignmentBatches(projectId?: string): Promise<AssignmentBatch[]> {
+    let url = API_ENDPOINTS.WORKFLOW_BATCHES;
+    if (projectId) {
+      url += `?project_id=${projectId}`;
+    }
+    return this.request<AssignmentBatch[]>(url);
+  }
+
+  async createAssignmentBatch(data: {
+    project_id: string;
+    name: string;
+    description: string;
+    deadline?: string;
+    priority: number;
+    file_pair_ids: string[];
+  }): Promise<AssignmentBatch> {
+    return this.request<AssignmentBatch>(`${API_ENDPOINTS.WORKFLOW_BATCHES}create_batch/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async assignTasks(batchId: string, assignments: {
+    user_id: string;
+    file_pair_ids?: string[];
+    pairs_count?: number;
+  }[]): Promise<{
+    assignments_created: number;
+    assignments: Assignment[];
+  }> {
+    return this.request<{ assignments_created: number; assignments: Assignment[] }>(
+      `${API_ENDPOINTS.WORKFLOW_BATCHES}${batchId}/assign_tasks/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          batch_id: batchId,
+          assignments,
+        }),
+      }
+    );
+  }
+
+  async getBatchProgress(batchId: string): Promise<{
+    batch_id: string;
+    total_assignments: number;
+    completion_percentage: number;
+    status_breakdown: Record<string, number>;
+    estimated_completion_hours: number;
+    deadline: string;
+    is_overdue: boolean;
+  }> {
+    return this.request(`${API_ENDPOINTS.WORKFLOW_BATCHES}${batchId}/progress/`);
+  }
+
+  async getAssignments(params?: {
+    batch_id?: string;
+    status?: string;
+    user_id?: string;
+    project_id?: string;
+  }): Promise<Assignment[]> {
+    let url = API_ENDPOINTS.WORKFLOW_ASSIGNMENTS;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) searchParams.append(key, value);
+      });
+      if (searchParams.toString()) {
+        url += `?${searchParams.toString()}`;
+      }
+    }
+    return this.request<Assignment[]>(url);
+  }
+
+  async getMyAssignments(status?: string): Promise<Assignment[]> {
+    let url = `${API_ENDPOINTS.WORKFLOW_ASSIGNMENTS}my_assignments/`;
+    if (status) {
+      url += `?status=${status}`;
+    }
+    return this.request<Assignment[]>(url);
+  }
+
+  async downloadAssignmentPackage(assignmentId: string): Promise<Blob> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.WORKFLOW_ASSIGNMENTS}${assignmentId}/download_package/`,
+      {
+        method: 'POST',
+        headers: {
+          ...(this.token && { Authorization: `Bearer ${this.token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+
+    return response.blob();
+  }
+
+  async updateAssignmentStatus(assignmentId: string, data: {
+    status: string;
+    notes?: string;
+    quality_score?: number;
+  }): Promise<Assignment> {
+    return this.request<Assignment>(
+      `${API_ENDPOINTS.WORKFLOW_ASSIGNMENTS}${assignmentId}/update_status/`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async reviewAssignment(assignmentId: string, data: {
+    status: 'approved' | 'rejected' | 'rework_needed';
+    comments?: string;
+    quality_rating?: number;
+  }): Promise<Assignment> {
+    return this.request<Assignment>(
+      `${API_ENDPOINTS.WORKFLOW_ASSIGNMENTS}${assignmentId}/review/`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async getAssignmentDashboard(): Promise<{
+    status_breakdown: Record<string, number>;
+    total_assignments: number;
+    completed_assignments: number;
+    average_quality_score: number;
+    total_files_processed: number;
+    recent_assignments: Assignment[];
+  }> {
+    return this.request(`${API_ENDPOINTS.WORKFLOW_ASSIGNMENTS}dashboard/`);
+  }
+
+  async getUserProfiles(): Promise<UserProfile[]> {
+    return this.request<UserProfile[]>(API_ENDPOINTS.WORKFLOW_USER_PROFILES);
+  }
+
+  async getMyProfile(): Promise<UserProfile> {
+    return this.request<UserProfile>(`${API_ENDPOINTS.WORKFLOW_USER_PROFILES}my_profile/`);
+  }
+
+  async updateUserProfile(profileId: string, data: Partial<UserProfile>): Promise<UserProfile> {
+    return this.request<UserProfile>(`${API_ENDPOINTS.WORKFLOW_USER_PROFILES}${profileId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserWorkloadReport(profileId: string, days: number = 30): Promise<{
+    period_days: number;
+    total_assignments: number;
+    completed_assignments: number;
+    total_files_processed: number;
+    avg_quality_score: number;
+    avg_processing_time_seconds: number;
+    current_active_assignments: number;
+  }> {
+    return this.request(
+      `${API_ENDPOINTS.WORKFLOW_USER_PROFILES}${profileId}/workload_report/?days=${days}`
+    );
+  }
+
+  async getProjectOverview(projectId: string): Promise<ProjectAnalytics> {
+    return this.request<ProjectAnalytics>(
+      `${API_ENDPOINTS.WORKFLOW_ANALYTICS}project_overview/?project_id=${projectId}`
+    );
+  }
+
+  async getWorkloadBalance(projectId: string): Promise<{
+    overloaded_users: any[];
+    underloaded_users: any[];
+    recommended_transfers: any[];
+  }> {
+    return this.request(
+      `${API_ENDPOINTS.WORKFLOW_ANALYTICS}workload_balance/?project_id=${projectId}`
+    );
+  }
+
+  async getTeamPerformance(projectId: string, days: number = 30): Promise<{
+    project_name: string;
+    period_days: number;
+    team_performance: any[];
+  }> {
+    return this.request(
+      `${API_ENDPOINTS.WORKFLOW_ANALYTICS}team_performance/?project_id=${projectId}&days=${days}`
+    );
+  }
+
+  async getActivityLogs(params?: {
+    user_id?: string;
+    project_id?: string;
+    action?: string;
+    resource_type?: string;
+  }): Promise<ActivityLog[]> {
+    let url = API_ENDPOINTS.WORKFLOW_ACTIVITY_LOGS;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) searchParams.append(key, value);
+      });
+      if (searchParams.toString()) {
+        url += `?${searchParams.toString()}`;
+      }
+    }
+    return this.request<ActivityLog[]>(url);
   }
 }
 
