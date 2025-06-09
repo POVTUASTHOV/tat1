@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Users, Target, BarChart3, Activity, Search, Filter, AlertCircle } from 'lucide-react';
-import Button from '../../../components/ui/Button';
-import { apiService } from '../../../lib/api';
-import { AssignmentBatch, Assignment, ProjectAnalytics } from '../../../types/workflow';
-import { Project } from '../../../types';
-import { formatDate } from '../../../lib/utils';
+import Button from '../../components/ui/Button';
+import { apiService } from '../../lib/api';
+import { AssignmentBatch, Assignment, ProjectAnalytics } from '../../types/workflow';
+import { Project } from '../../types';
+import { formatDate } from '../../lib/utils';
 
-export default function WorkflowPage() {
+export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [batches, setBatches] = useState<AssignmentBatch[]>([]);
@@ -17,20 +17,21 @@ export default function WorkflowPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [hasWorkflowAccess, setHasWorkflowAccess] = useState(true);
 
   useEffect(() => {
     loadInitialData();
   }, []);
 
   useEffect(() => {
-    if (selectedProject) {
+    if (selectedProject && hasWorkflowAccess) {
       loadProjectData();
     } else {
       setBatches([]);
       setAssignments([]);
       setAnalytics(null);
     }
-  }, [selectedProject]);
+  }, [selectedProject, hasWorkflowAccess]);
 
   const loadInitialData = async () => {
     try {
@@ -63,29 +64,36 @@ export default function WorkflowPage() {
 
       const [batchesResult, assignmentsResult, analyticsResult] = results;
 
+      let hasAnySuccess = false;
+
       if (batchesResult.status === 'fulfilled') {
         setBatches(batchesResult.value);
+        hasAnySuccess = true;
       } else {
         console.error('Failed to load batches:', batchesResult.reason);
       }
 
       if (assignmentsResult.status === 'fulfilled') {
         setAssignments(assignmentsResult.value);
+        hasAnySuccess = true;
       } else {
         console.error('Failed to load assignments:', assignmentsResult.reason);
       }
 
       if (analyticsResult.status === 'fulfilled') {
         setAnalytics(analyticsResult.value);
+        hasAnySuccess = true;
       } else {
         console.error('Failed to load analytics:', analyticsResult.reason);
       }
 
-      if (results.every(result => result.status === 'rejected')) {
+      if (!hasAnySuccess) {
+        setHasWorkflowAccess(false);
         setError('You do not have permission to access workflow data. Please contact an administrator.');
       }
     } catch (error) {
       console.error('Failed to load project data:', error);
+      setHasWorkflowAccess(false);
       setError('Failed to load workflow data. Please check your permissions.');
     }
   };
@@ -115,12 +123,12 @@ export default function WorkflowPage() {
     );
   }
 
-  if (error) {
+  if (!hasWorkflowAccess || error) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflow Management</h1>
-          <p className="text-gray-600 mt-1">Manage assignments, batches, and team workflow</p>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Overview of your workflow and projects</p>
         </div>
         
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
@@ -128,7 +136,7 @@ export default function WorkflowPage() {
             <AlertCircle className="w-6 h-6 text-red-600" />
             <div>
               <h3 className="text-lg font-semibold text-red-900">Access Denied</h3>
-              <p className="text-red-700 mt-1">{error}</p>
+              <p className="text-red-700 mt-1">{error || 'You do not have permission to access workflow features.'}</p>
               <p className="text-red-600 text-sm mt-2">
                 You need workflow permissions to access this feature. Contact your administrator to:
               </p>
@@ -148,8 +156,8 @@ export default function WorkflowPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflow Management</h1>
-          <p className="text-gray-600 mt-1">Manage assignments, batches, and team workflow</p>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Overview of your workflow and projects</p>
         </div>
         
         <div className="flex items-center space-x-4">
