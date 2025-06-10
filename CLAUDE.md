@@ -26,6 +26,7 @@ This is a full-stack data management system with file upload, storage, and workf
 
 ### Backend (from /backend directory)
 **Prerequisites:** Install Django and dependencies (no requirements.txt found - dependencies in Django apps)
+**Database:** MySQL server must be running with database 'nas_db' and user 'datamanager'
 
 - **Run Django server:** `python manage.py runserver` (port 8000)
 - **Run FastAPI server:** `python fastapi_app/main.py` (async file upload server)
@@ -41,6 +42,8 @@ This is a full-stack data management system with file upload, storage, and workf
 - `python fix_mime_types.py` - Fix file MIME types
 - `python quick_quota.py` - Check storage quotas
 - `python delete_files.py` - Bulk file operations
+- `python check_users.py` - Check user status and roles
+- `python make_superuser.py` - Make user 'TAT' a superuser
 
 ### Frontend (from /frontend directory)
 - **Development server:** `npm run dev` (port 3000)
@@ -88,11 +91,13 @@ This is a full-stack data management system with file upload, storage, and workf
 ## Important Notes
 
 - **Dual server setup:** Both Django (`python manage.py runserver`) and FastAPI (`python fastapi_app/main.py`) need to be running for full functionality
+- **Database setup:** MySQL database 'nas_db' with user 'datamanager' - ensure MySQL is running and database exists
 - **File permissions:** Media files have automatic permission management in development
 - **Logging:** Comprehensive logging configured for uploads and file operations in `/logs`
 - **Security:** Custom permission middleware enforces access controls across all endpoints
 - **No dependency files:** Dependencies are not tracked in requirements.txt - check installed packages in Django apps
 - **Testing:** Limited test coverage - main test files in `/backend/test/` directory
+- **Default credentials:** Check `make_superuser.py` script for creating admin access
 
 ## API Endpoints Structure
 

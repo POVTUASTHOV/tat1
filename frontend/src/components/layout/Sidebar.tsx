@@ -6,7 +6,6 @@ import {
   Home, 
   FolderOpen, 
   Files, 
-  Upload, 
   BarChart3, 
   Settings,
   Users,
@@ -40,8 +39,16 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const isSuperuser = user?.workflow_role_details?.name === 'superuser';
-  const isAdmin = user?.workflow_role_details?.name === 'admin' || isSuperuser;
+  const userRole = user?.workflow_role_details?.name;
+  const isSuperuser = userRole === 'superuser';
+  const isAdmin = userRole === 'admin' || isSuperuser;
+
+  console.log('Debug Sidebar:', {
+    user: user,
+    userRole: userRole,
+    isSuperuser: isSuperuser,
+    workflow_role_details: user?.workflow_role_details
+  });
 
   const renderNavItems = (items: Array<{name: string, href: string, icon: any}>) => {
     return items.map((item) => {
@@ -74,7 +81,7 @@ export default function Sidebar() {
       <nav className="p-4 space-y-2">
         {renderNavItems(baseNavigation)}
         
-        {isSuperuser && (
+        {user && (
           <>
             <div className="pt-4 pb-2">
               <div className="px-3 py-1">
@@ -86,6 +93,14 @@ export default function Sidebar() {
             {renderNavItems(adminNavigation)}
           </>
         )}
+        
+        <div className="pt-4 border-t border-gray-200">
+          <div className="px-3 py-2 text-xs text-gray-500">
+            <div>User: {user?.username}</div>
+            <div>Role: {userRole || 'None'}</div>
+            <div>Is Superuser: {isSuperuser ? 'Yes' : 'No'}</div>
+          </div>
+        </div>
       </nav>
     </div>
   );

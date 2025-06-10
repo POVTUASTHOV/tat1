@@ -39,8 +39,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 
                  'workflow_role', 'workflow_role_details', 'project_assignments',
                  'accessible_projects_count', 'storage_quota', 'storage_used', 
-                 'is_active', 'created_by', 'created_by_name', 'date_joined', 'last_login']
-        read_only_fields = ['id', 'storage_used', 'date_joined', 'last_login']
+                 'is_active', 'is_superuser', 'created_by', 'created_by_name', 'date_joined', 'last_login']
+        read_only_fields = ['id', 'storage_used', 'date_joined', 'last_login', 'is_superuser']
     
     def get_workflow_role_details(self, obj):
         if obj.workflow_role:

@@ -6,6 +6,12 @@ export interface User {
   last_name: string;
   storage_quota: number;
   storage_used: number;
+  is_superuser?: boolean;
+  workflow_role_details?: {
+    id: string;
+    name: string;
+    display_name: string;
+  };
 }
 
 export interface LoginCredentials {
@@ -13,10 +19,19 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface Permissions {
+  is_superuser: boolean;
+  is_admin: boolean;
+  is_manager: boolean;
+  is_employee: boolean;
+  can_access_workflow: boolean;
+}
+
 export interface LoginResponse {
   access: string;
   refresh: string;
   user: User;
+  permissions?: Permissions;
 }
 
 export interface Project {

@@ -67,12 +67,12 @@ class User(AbstractUser):
         return self.workflow_role and self.workflow_role.name == WorkflowRole.EMPLOYEE
     
     def can_create_user(self, target_role):
-        if self.is_superuser:
-            return True
+        if self.is_superuser or (self.workflow_role and self.workflow_role.name == WorkflowRole.SUPERUSER):
+            return True  # Superuser can create all roles including other superusers
         if self.is_admin_role() and target_role in [WorkflowRole.MANAGER, WorkflowRole.EMPLOYEE]:
-            return True
+            return True  # Admin can create managers and employees
         if self.is_manager_role() and target_role == WorkflowRole.EMPLOYEE:
-            return True
+            return True  # Manager can create employees
         return False
     
     def get_accessible_projects(self):

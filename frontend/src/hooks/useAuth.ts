@@ -29,7 +29,7 @@ export const useAuth = () => {
       setLoading(true);
       const response = await apiService.login(credentials);
       
-      setAuth(response.user, response.access);
+      setAuth(response.user, response.access, response.refresh, response.permissions);
       
       router.push('/dashboard');
       return { success: true };

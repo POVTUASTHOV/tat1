@@ -47,6 +47,28 @@ class Command(BaseCommand):
         
         roles_data = [
             {
+                'name': 'superuser',
+                'description': 'Superuser - Complete system access and control',
+                'permissions': {
+                    'manage_users': True,
+                    'manage_projects': True,
+                    'manage_assignments': True,
+                    'view_analytics': True,
+                    'system_config': True,
+                    'create_batches': True,
+                    'assign_tasks': True,
+                    'review_assignments': True,
+                    'view_team_analytics': True,
+                    'manage_project_users': True,
+                    'view_assignments': True,
+                    'download_packages': True,
+                    'upload_results': True,
+                    'update_status': True,
+                    'manage_roles': True,
+                    'system_admin': True
+                }
+            },
+            {
                 'name': 'admin',
                 'description': 'System Administrator - Full access to all features',
                 'permissions': {
