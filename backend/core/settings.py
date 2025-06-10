@@ -148,9 +148,47 @@ FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp')
 FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 
-CHUNK_SIZE = 100 * 1024 * 1024
+# Dynamic chunk size configurations
+CHUNK_SIZE_OPTIONS = {
+    'small': 1 * 1024 * 1024,      # 1MB - Weak/unstable networks
+    'medium': 10 * 1024 * 1024,    # 10MB - Recommended for most cases
+    'large': 20 * 1024 * 1024,     # 20MB - Strong networks, large files
+    'xlarge': 50 * 1024 * 1024,    # 50MB - Very large files, stable networks
+}
+
+# Default chunk size (backward compatibility)
+CHUNK_SIZE = CHUNK_SIZE_OPTIONS['large']  # 20MB default
+DEFAULT_CHUNK_SIZE = 'large'
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024 * 1024
 CONCURRENT_CHUNKS = 4
+
+# Network condition thresholds
+NETWORK_CONDITIONS = {
+    'weak': {
+        'max_chunk_size': 'small',
+        'concurrent_chunks': 2,
+        'retry_attempts': 5,
+        'timeout': 60
+    },
+    'medium': {
+        'max_chunk_size': 'medium', 
+        'concurrent_chunks': 3,
+        'retry_attempts': 3,
+        'timeout': 45
+    },
+    'strong': {
+        'max_chunk_size': 'large',
+        'concurrent_chunks': 4,
+        'retry_attempts': 2,
+        'timeout': 30
+    },
+    'excellent': {
+        'max_chunk_size': 'xlarge',
+        'concurrent_chunks': 6,
+        'retry_attempts': 1,
+        'timeout': 20
+    }
+}
 
 os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'uploads', 'chunks'), exist_ok=True)

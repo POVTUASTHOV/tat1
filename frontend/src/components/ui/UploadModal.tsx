@@ -6,6 +6,8 @@ import { useState, useCallback, useRef } from 'react';
 import { Upload, X, Check, AlertCircle, File, Video, Cpu, Zap } from 'lucide-react';
 import Button from './Button';
 import { formatFileSize } from '../../lib/utils';
+import UploadOptimizer from './UploadOptimizer';
+import type { UploadConfig } from '@/lib/networkOptimizer';
 
 interface UploadFile {
   file: File;
@@ -41,6 +43,8 @@ export default function UploadModal({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [gpuStatus, setGpuStatus] = useState<any>(null);
+  const [uploadConfig, setUploadConfig] = useState<UploadConfig | null>(null);
+  const [showOptimizer, setShowOptimizer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateFileId = () => Math.random().toString(36).substr(2, 9);
@@ -109,6 +113,17 @@ export default function UploadModal({
     if (newUploadFiles.some(f => f.isVideo)) {
       checkGpuStatus();
     }
+    
+    // Show optimizer if files are large or multiple files
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    const largeFiles = files.some(file => file.size > 100 * 1024 * 1024); // >100MB
+    if (largeFiles || files.length > 1 || totalSize > 500 * 1024 * 1024) {
+      setShowOptimizer(true);
+    }
+  };
+
+  const handleConfigChange = (config: UploadConfig) => {
+    setUploadConfig(config);
   };
 
   const removeFile = (fileId: string) => {
@@ -117,7 +132,9 @@ export default function UploadModal({
 
   const uploadSingleFile = async (uploadFile: UploadFile): Promise<void> => {
     const { file } = uploadFile;
-    const chunkSize = 1024 * 1024;
+    // Use optimized chunk size or fallback to 10MB default
+    const chunkSize = uploadConfig?.chunkSizeBytes || (10 * 1024 * 1024);
+    const chunkSizeName = uploadConfig?.chunkSizeName || 'medium';
     const totalChunks = Math.ceil(file.size / chunkSize);
 
     setUploadFiles(prev => prev.map(f => 
@@ -137,6 +154,7 @@ export default function UploadModal({
         formData.append('total_chunks', totalChunks.toString());
         formData.append('total_size', file.size.toString());
         formData.append('project_id', projectId);
+        formData.append('chunk_size_name', chunkSizeName);
         
         if (folderId) {
           formData.append('folder_id', folderId);
@@ -357,6 +375,7 @@ export default function UploadModal({
               )}
             </div>
           )}
+
         </div>
 
         <div className="p-6 flex-1 overflow-y-auto">
@@ -411,6 +430,15 @@ export default function UploadModal({
                   )}
                 </h4>
                 <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowOptimizer(!showOptimizer)}
+                    disabled={isUploading}
+                  >
+                    <Zap className="w-4 h-4 mr-1" />
+                    {showOptimizer ? 'Hide' : 'Show'} Optimizer
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -502,6 +530,15 @@ export default function UploadModal({
                   </div>
                 ))}
               </div>
+
+              {/* Upload Optimizer */}
+              {showOptimizer && (
+                <UploadOptimizer
+                  fileSize={uploadFiles.reduce((sum, uf) => sum + uf.file.size, 0)}
+                  onConfigChange={handleConfigChange}
+                  className="mt-4"
+                />
+              )}
             </div>
           )}
         </div>
@@ -514,6 +551,11 @@ export default function UploadModal({
                 {hasVideos && (
                   <span className="block text-xs text-purple-600">
                     Videos are converted to H.264 for optimal playback
+                  </span>
+                )}
+                {uploadConfig && (
+                  <span className="block text-xs text-blue-600">
+                    Using {uploadConfig.chunkSizeMB}MB chunks • {uploadConfig.concurrentChunks} parallel uploads
                   </span>
                 )}
               </div>

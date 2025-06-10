@@ -25,13 +25,19 @@ This is a full-stack data management system with file upload, storage, and workf
 ## Development Commands
 
 ### Backend (from /backend directory)
-**Prerequisites:** Install Django and dependencies (no requirements.txt found - dependencies in Django apps)
-**Database:** MySQL server must be running with database 'nas_db' and user 'datamanager'
+**Prerequisites:** 
+- Python with Django, FastAPI, PyMySQL, and REST framework packages
+- MySQL server running with database 'nas_db', user 'datamanager', password '123456789'
+- No requirements.txt - dependencies managed via Django apps
 
+**Core Development:**
 - **Run Django server:** `python manage.py runserver` (port 8000)
-- **Run FastAPI server:** `python fastapi_app/main.py` (async file upload server)
+- **Run FastAPI server:** `python fastapi_app/main.py` (async upload/video processing server)
+- **Both servers required:** FastAPI handles chunked uploads, Django handles API/auth
 - **Database migrations:** `python manage.py makemigrations` then `python manage.py migrate`
 - **Create superuser:** `python manage.py createsuperuser`
+
+**Management Commands:**
 - **Reset database:** `python manage.py reset_db` (custom command)
 - **Cleanup files:** `python manage.py cleanup_files`
 - **Setup workflow:** `python manage.py setup_workflow`
@@ -53,11 +59,12 @@ This is a full-stack data management system with file upload, storage, and workf
 
 ## Key Configuration
 
-- **Database:** MySQL connection configured in `core/settings.py`
-- **File uploads:** Chunked uploads with 100MB chunks, max 50GB files
-- **Authentication:** JWT tokens (1-hour access, 7-day refresh)
+- **Database:** MySQL connection in `core/settings.py` - host: 127.0.0.1:3306, db: nas_db, user: datamanager
+- **File uploads:** Dynamic chunked uploads (1MB-50MB chunks based on network), max 50GB files
+- **Authentication:** JWT tokens (1-hour access, 7-day refresh) with token blacklisting
 - **CORS:** Configured for localhost:3000 (frontend) and localhost:8000 (backend)
-- **Media handling:** Files stored in `/media` with permission management
+- **Media handling:** Files stored in `/media` with automatic permission management in development
+- **Adaptive upload:** Network condition detection with automatic chunk size optimization
 
 ## Application Structure
 
@@ -90,14 +97,15 @@ This is a full-stack data management system with file upload, storage, and workf
 
 ## Important Notes
 
-- **Dual server setup:** Both Django (`python manage.py runserver`) and FastAPI (`python fastapi_app/main.py`) need to be running for full functionality
-- **Database setup:** MySQL database 'nas_db' with user 'datamanager' - ensure MySQL is running and database exists
-- **File permissions:** Media files have automatic permission management in development
-- **Logging:** Comprehensive logging configured for uploads and file operations in `/logs`
-- **Security:** Custom permission middleware enforces access controls across all endpoints
-- **No dependency files:** Dependencies are not tracked in requirements.txt - check installed packages in Django apps
-- **Testing:** Limited test coverage - main test files in `/backend/test/` directory
-- **Default credentials:** Check `make_superuser.py` script for creating admin access
+- **Dual server architecture:** Both Django (port 8000) and FastAPI servers must run simultaneously
+  - Django: `python manage.py runserver` - handles API/auth/admin
+  - FastAPI: `python fastapi_app/main.py` - handles chunked uploads/video processing
+- **Database setup:** MySQL 'nas_db' with user 'datamanager'/password '123456789' must exist
+- **Custom middleware:** Three custom middleware classes in users app handle permissions and logging
+- **Logging:** All operations logged to `/backend/logs/upload.log` with structured formatting
+- **No dependency tracking:** Dependencies managed through Django apps, not requirements.txt
+- **Testing:** Limited coverage - test files in `/backend/test/` directory
+- **Admin access:** Use `python make_superuser.py` to create admin user 'TAT'
 
 ## API Endpoints Structure
 

@@ -182,6 +182,110 @@ class UserViewSet(viewsets.ModelViewSet):
         user.project_assignments.update(is_active=False)
         
         return Response({'message': f'User {user.username} has been deactivated'})
+    
+    @action(detail=True, methods=['post'])
+    def change_role(self, request, pk=None):
+        """Promote or demote user role"""
+        user = self.get_object()
+        target_role = request.data.get('role')
+        
+        if not target_role:
+            return Response(
+                {'error': 'Role is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate target role exists
+        try:
+            new_workflow_role = WorkflowRole.objects.get(name=target_role)
+        except WorkflowRole.DoesNotExist:
+            return Response(
+                {'error': 'Invalid role'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if user is trying to change their own role
+        if user == request.user:
+            return Response(
+                {'error': 'Cannot change your own role'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        current_role = user.workflow_role.name if user.workflow_role else None
+        
+        # If role is the same, no change needed
+        if current_role == target_role:
+            return Response(
+                {'error': 'User already has this role'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check permissions based on whether it's promotion or demotion
+        role_hierarchy = [
+            WorkflowRole.EMPLOYEE,    # Level 1 (lowest)
+            WorkflowRole.MANAGER,     # Level 2
+            WorkflowRole.ADMIN,       # Level 3
+            WorkflowRole.SUPERUSER    # Level 4 (highest)
+        ]
+        
+        try:
+            current_level = role_hierarchy.index(current_role) if current_role else -1
+            target_level = role_hierarchy.index(target_role)
+            
+            is_promotion = target_level > current_level
+            is_demotion = target_level < current_level
+            
+            # Check permissions
+            if is_promotion and not request.user.can_promote_user(current_role, target_role):
+                return Response(
+                    {'error': f'You do not have permission to promote {user.username} from {current_role} to {target_role}'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            elif is_demotion and not request.user.can_demote_user(current_role, target_role):
+                return Response(
+                    {'error': f'You do not have permission to demote {user.username} from {current_role} to {target_role}'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except ValueError:
+            return Response(
+                {'error': 'Invalid role hierarchy'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Perform the role change
+        old_role = user.workflow_role.name if user.workflow_role else 'None'
+        user.workflow_role = new_workflow_role
+        user.save()
+        
+        # Log the role change
+        action_type = 'promotion' if is_promotion else 'demotion'
+        
+        return Response({
+            'message': f'Successfully changed {user.username} role from {old_role} to {target_role}',
+            'user': {
+                'id': str(user.id),
+                'username': user.username,
+                'old_role': old_role,
+                'new_role': target_role,
+                'action_type': action_type
+            }
+        })
+    
+    @action(detail=True, methods=['get'])
+    def available_roles(self, request, pk=None):
+        """Get available roles for promotion/demotion of a specific user"""
+        user = self.get_object()
+        current_role = user.workflow_role.name if user.workflow_role else None
+        
+        promotable_roles = request.user.get_promotable_roles(current_role)
+        demotable_roles = request.user.get_demotable_roles(current_role)
+        
+        return Response({
+            'current_role': current_role,
+            'promotable_roles': promotable_roles,
+            'demotable_roles': demotable_roles,
+            'can_change_role': len(promotable_roles) > 0 or len(demotable_roles) > 0
+        })
 
 class WorkflowRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkflowRole.objects.all()

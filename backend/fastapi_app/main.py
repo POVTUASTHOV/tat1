@@ -45,9 +45,18 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="NAS FastAPI", version="1.0.0")
 router = APIRouter()
 
-CHUNK_SIZE = 100 * 1024 * 1024
+# Dynamic chunk size support
+DEFAULT_CHUNK_SIZE = 20 * 1024 * 1024  # 20MB default
 MAX_CONCURRENT_CHUNKS = 4
 TEMP_CLEANUP_INTERVAL = 1800
+
+def get_chunk_size(chunk_size_name: str = 'large') -> int:
+    """Get chunk size in bytes based on configuration name"""
+    return settings.CHUNK_SIZE_OPTIONS.get(chunk_size_name, settings.CHUNK_SIZE_OPTIONS['large'])
+
+def get_network_config(network_condition: str = 'strong') -> dict:
+    """Get network configuration based on condition"""
+    return settings.NETWORK_CONDITIONS.get(network_condition, settings.NETWORK_CONDITIONS['strong'])
 
 app.add_middleware(
     CORSMiddleware,
@@ -867,6 +876,171 @@ async def test_video_processing(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
+# Network and chunk size optimization endpoints
+@router.get("/network/test")
+async def test_network_speed():
+    """Test network speed to recommend optimal chunk size"""
+    test_data = b"0" * (1024 * 1024)  # 1MB test data
+    start_time = time.time()
+    
+    return {
+        "test_size_mb": 1,
+        "timestamp": start_time,
+        "recommended_config": "Run speed test from frontend for accurate results"
+    }
+
+@router.get("/upload/config")
+async def get_upload_config(
+    file_size: Optional[int] = None,
+    network_condition: str = "strong"
+):
+    """Get recommended upload configuration based on file size and network condition"""
+    network_config = get_network_config(network_condition)
+    chunk_size_name = network_config['max_chunk_size']
+    chunk_size_bytes = get_chunk_size(chunk_size_name)
+    
+    # Adjust for file size
+    if file_size:
+        file_size_gb = file_size / (1024 * 1024 * 1024)
+        
+        # For very large files (>2GB), prefer larger chunks if network is good
+        if file_size_gb > 2 and network_condition in ['strong', 'excellent']:
+            chunk_size_name = 'xlarge'
+            chunk_size_bytes = get_chunk_size('xlarge')
+        
+        # For small files (<100MB), use smaller chunks
+        elif file_size < 100 * 1024 * 1024:
+            if chunk_size_name in ['large', 'xlarge']:
+                chunk_size_name = 'medium'
+                chunk_size_bytes = get_chunk_size('medium')
+    
+    total_chunks = max(1, (file_size or chunk_size_bytes) // chunk_size_bytes)
+    
+    return {
+        "chunk_size_name": chunk_size_name,
+        "chunk_size_bytes": chunk_size_bytes,
+        "chunk_size_mb": chunk_size_bytes / (1024 * 1024),
+        "concurrent_chunks": network_config['concurrent_chunks'],
+        "retry_attempts": network_config['retry_attempts'],
+        "timeout_seconds": network_config['timeout'],
+        "total_chunks": total_chunks,
+        "network_condition": network_condition,
+        "file_size_mb": (file_size or 0) / (1024 * 1024),
+        "estimated_upload_time_minutes": (total_chunks * chunk_size_bytes) / (10 * 1024 * 1024) / 60,  # Rough estimate
+        "resumability": {
+            "excellent": chunk_size_name in ['small', 'medium'],
+            "good": chunk_size_name == 'large',
+            "limited": chunk_size_name == 'xlarge'
+        }
+    }
+
+@router.get("/upload/chunk-sizes")
+async def get_available_chunk_sizes():
+    """Get all available chunk size options with descriptions"""
+    return {
+        "options": {
+            "small": {
+                "size_bytes": settings.CHUNK_SIZE_OPTIONS['small'],
+                "size_mb": settings.CHUNK_SIZE_OPTIONS['small'] / (1024 * 1024),
+                "description": "1MB - Good resumability, suitable for weak/unstable networks",
+                "pros": ["Excellent resumability", "Low memory usage", "Works on slow connections"],
+                "cons": ["Slower upload", "Many small requests", "Higher overhead"]
+            },
+            "medium": {
+                "size_bytes": settings.CHUNK_SIZE_OPTIONS['medium'],
+                "size_mb": settings.CHUNK_SIZE_OPTIONS['medium'] / (1024 * 1024),
+                "description": "10MB - Well-balanced choice, recommended for most cases",
+                "pros": ["Good balance of speed and reliability", "Reasonable memory usage", "Good resumability"],
+                "cons": ["May be slow for very large files"]
+            },
+            "large": {
+                "size_bytes": settings.CHUNK_SIZE_OPTIONS['large'],
+                "size_mb": settings.CHUNK_SIZE_OPTIONS['large'] / (1024 * 1024),
+                "description": "20MB - Faster uploads, suitable for strong networks",
+                "pros": ["Fast upload speeds", "Fewer requests", "Good for large files"],
+                "cons": ["Higher memory usage", "Less resumable on connection issues"]
+            },
+            "xlarge": {
+                "size_bytes": settings.CHUNK_SIZE_OPTIONS['xlarge'],
+                "size_mb": settings.CHUNK_SIZE_OPTIONS['xlarge'] / (1024 * 1024),
+                "description": "50MB - Very fast, best for very large files (>2GB) on stable networks",
+                "pros": ["Very fast uploads", "Minimal overhead", "Excellent for huge files"],
+                "cons": ["High memory usage", "Difficult to resume", "Requires stable connection"]
+            }
+        },
+        "default": settings.DEFAULT_CHUNK_SIZE,
+        "recommendations": {
+            "weak_network": "small",
+            "mobile_data": "small",
+            "home_wifi": "medium",
+            "office_ethernet": "large",
+            "datacenter": "xlarge",
+            "large_files_stable": "xlarge",
+            "small_files": "medium"
+        }
+    }
+
+# Modified chunk upload to support dynamic chunk sizes
+class ChunkUploadData(BaseModel):
+    file: UploadFile
+    chunk_number: int
+    total_chunks: int
+    filename: str
+    project_id: Optional[str] = None
+    folder_id: Optional[str] = None
+    chunk_size_name: Optional[str] = 'large'  # New field for dynamic chunk size
+
+@router.post("/upload/chunk")
+async def upload_chunk(
+    file: UploadFile = File(...),
+    chunk_number: int = Form(...),
+    total_chunks: int = Form(...), 
+    filename: str = Form(...),
+    project_id: Optional[str] = Form(None),
+    folder_id: Optional[str] = Form(None),
+    chunk_size_name: str = Form('large'),  # Dynamic chunk size
+    authorization: str = Header(None)
+):
+    """Upload a file chunk with dynamic chunk size support"""
+    user = await get_current_user(authorization)
+    
+    # Get chunk size configuration
+    expected_chunk_size = get_chunk_size(chunk_size_name)
+    
+    # Validate chunk size
+    if file.size and file.size > expected_chunk_size * 1.1:  # Allow 10% tolerance
+        raise HTTPException(
+            status_code=413,
+            detail=f"Chunk size {file.size} exceeds expected size {expected_chunk_size} for '{chunk_size_name}' configuration"
+        )
+    
+    try:
+        # Create chunk directory with chunk size info
+        chunk_dir = os.path.join(settings.MEDIA_ROOT, 'uploads', 'chunks', f"{user.id}_{filename}_{chunk_size_name}")
+        os.makedirs(chunk_dir, exist_ok=True)
+        
+        # Save chunk with size info in filename
+        chunk_filename = f"chunk_{chunk_number}_{chunk_size_name}"
+        chunk_path = os.path.join(chunk_dir, chunk_filename)
+        
+        with open(chunk_path, "wb") as chunk_file:
+            content = await file.read()
+            chunk_file.write(content)
+        
+        logger.info(f"Chunk {chunk_number}/{total_chunks} uploaded for {filename} (size: {chunk_size_name})")
+        
+        return {
+            "message": f"Chunk {chunk_number}/{total_chunks} uploaded successfully",
+            "chunk_size_used": chunk_size_name,
+            "chunk_size_bytes": len(content),
+            "filename": filename
+        }
+        
+    except Exception as e:
+        logger.error(f"Error uploading chunk {chunk_number} for {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload chunk: {str(e)}")
+
+# Include all routes
 app.include_router(router, prefix="/api")
 
 @app.on_event("startup")

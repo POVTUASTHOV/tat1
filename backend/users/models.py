@@ -75,13 +75,67 @@ class User(AbstractUser):
             return True  # Manager can create employees
         return False
     
+    def can_promote_user(self, current_role, target_role):
+        """Check if this user can promote another user from current_role to target_role"""
+        if self.is_superuser or (self.workflow_role and self.workflow_role.name == WorkflowRole.SUPERUSER):
+            # Superuser can promote anyone to any role
+            return True
+        
+        if self.is_admin_role():
+            # Admin can only promote Employee → Manager, cannot promote to Admin or Superuser
+            allowed_promotions = [
+                (WorkflowRole.EMPLOYEE, WorkflowRole.MANAGER)
+            ]
+            return (current_role, target_role) in allowed_promotions
+        
+        # Manager and Employee cannot promote anyone
+        return False
+    
+    def can_demote_user(self, current_role, target_role):
+        """Check if this user can demote another user from current_role to target_role"""
+        if self.is_superuser or (self.workflow_role and self.workflow_role.name == WorkflowRole.SUPERUSER):
+            # Superuser can demote anyone from any role
+            return True
+        
+        if self.is_admin_role():
+            # Admin can only demote Manager → Employee
+            allowed_demotions = [
+                (WorkflowRole.MANAGER, WorkflowRole.EMPLOYEE)
+            ]
+            return (current_role, target_role) in allowed_demotions
+        
+        # Manager and Employee cannot demote anyone
+        return False
+    
+    def get_promotable_roles(self, current_role):
+        """Get list of roles this user can promote the target user to"""
+        promotable_roles = []
+        
+        for role_choice in WorkflowRole.ROLE_CHOICES:
+            role_name = role_choice[0]
+            if role_name != current_role and self.can_promote_user(current_role, role_name):
+                promotable_roles.append(role_name)
+        
+        return promotable_roles
+    
+    def get_demotable_roles(self, current_role):
+        """Get list of roles this user can demote the target user to"""
+        demotable_roles = []
+        
+        for role_choice in WorkflowRole.ROLE_CHOICES:
+            role_name = role_choice[0]
+            if role_name != current_role and self.can_demote_user(current_role, role_name):
+                demotable_roles.append(role_name)
+        
+        return demotable_roles
+    
     def get_accessible_projects(self):
         from storage.models import Project
         if self.is_admin_role():
             return Project.objects.all()
         return Project.objects.filter(
             models.Q(user=self) | 
-            models.Q(project_assignments__user=self, project_assignments__is_active=True)
+            models.Q(user_assignments__user=self, user_assignments__is_active=True)
         ).distinct()
 
     class Meta:

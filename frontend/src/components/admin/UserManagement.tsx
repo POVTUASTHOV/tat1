@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Eye, EyeOff, Shield, UserCheck, Copy, Check } from 'lucide-react';
+import { Users, Plus, Eye, EyeOff, Shield, UserCheck, Copy, Check, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 import { useToastStore } from '@/stores/toastStore';
 import { useAuthStore } from '@/stores/authStore';
+import { apiService } from '@/lib/api';
 
 interface Project {
   id: string;
@@ -70,7 +71,7 @@ const DEFAULT_STORAGE_QUOTAS = {
   superuser: 1000 * 1024 * 1024 * 1024,
   admin: 500 * 1024 * 1024 * 1024,
   manager: 100 * 1024 * 1024 * 1024,
-  employee: 50 * 1024 * 1024 * 1024
+  employee: 15 * 1024 * 1024 * 1024
 };
 
 const INITIAL_FORM: CreateUserForm = {
@@ -97,6 +98,16 @@ export default function UserManagement() {
   const [showPassword2, setShowPassword2] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
   const [createdUserInfo, setCreatedUserInfo] = useState<{email: string, password: string} | null>(null);
+  
+  // Role management state
+  const [roleChangeUser, setRoleChangeUser] = useState<User | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<{
+    promotable_roles: string[];
+    demotable_roles: string[];
+    can_change_role: boolean;
+  } | null>(null);
+  const [showRoleChangeModal, setShowRoleChangeModal] = useState(false);
+  const [roleChangeLoading, setRoleChangeLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -197,6 +208,61 @@ export default function UserManagement() {
       message: `${type} đã được sao chép vào clipboard`
     });
     setTimeout(() => setCopiedPassword(false), 2000);
+  };
+
+  // Role management functions
+  const handleRoleChangeClick = async (user: User) => {
+    try {
+      const roleData = await apiService.getUserAvailableRoles(user.id);
+      setAvailableRoles(roleData);
+      setRoleChangeUser(user);
+      setShowRoleChangeModal(true);
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Lỗi',
+        message: 'Không thể tải thông tin vai trò'
+      });
+    }
+  };
+
+  const handleRoleChange = async (newRole: string) => {
+    if (!roleChangeUser) return;
+    
+    setRoleChangeLoading(true);
+    try {
+      const result = await apiService.changeUserRole(roleChangeUser.id, newRole);
+      
+      addToast({
+        type: 'success',
+        title: 'Thành công',
+        message: result.message
+      });
+      
+      // Refresh user list
+      await fetchUsers();
+      
+      // Close modal
+      setShowRoleChangeModal(false);
+      setRoleChangeUser(null);
+      setAvailableRoles(null);
+      
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Lỗi',
+        message: error instanceof Error ? error.message : 'Không thể thay đổi vai trò'
+      });
+    } finally {
+      setRoleChangeLoading(false);
+    }
+  };
+
+  const closeRoleChangeModal = () => {
+    setShowRoleChangeModal(false);
+    setRoleChangeUser(null);
+    setAvailableRoles(null);
+    setRoleChangeLoading(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -715,6 +781,9 @@ export default function UserManagement() {
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ngày tạo
                     </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Thao tác
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -781,6 +850,18 @@ export default function UserManagement() {
                             day: '2-digit'
                           })}
                         </td>
+                        <td className="px-6 py-4">
+                          {currentUser?.id !== user.id && (
+                            <button
+                              onClick={() => handleRoleChangeClick(user)}
+                              className="inline-flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Thay đổi vai trò"
+                            >
+                              <Settings className="w-4 h-4 mr-1" />
+                              Vai trò
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -803,6 +884,111 @@ export default function UserManagement() {
             </div>
           </div>
         </div>
+
+        {/* Role Change Modal */}
+        {showRoleChangeModal && roleChangeUser && availableRoles && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Thay đổi vai trò</h3>
+                  <button
+                    onClick={closeRoleChangeModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Thay đổi vai trò cho: <span className="font-semibold">{roleChangeUser.username}</span>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Vai trò hiện tại: <span className="font-medium">{getRoleInfo(roleChangeUser.workflow_role_details?.name || '').label}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {availableRoles.promotable_roles.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <ChevronUp className="w-4 h-4 mr-1 text-green-500" />
+                        Thăng cấp
+                      </h4>
+                      <div className="space-y-2">
+                        {availableRoles.promotable_roles.map(role => {
+                          const roleInfo = getRoleInfo(role);
+                          return (
+                            <button
+                              key={role}
+                              onClick={() => handleRoleChange(role)}
+                              disabled={roleChangeLoading}
+                              className={`w-full p-3 text-left border-2 rounded-lg transition-all duration-200 hover:border-green-300 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed ${roleInfo.color}`}
+                            >
+                              <div className="font-medium">{roleInfo.label}</div>
+                              <div className="text-xs opacity-80">{roleInfo.description}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {availableRoles.demotable_roles.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <ChevronDown className="w-4 h-4 mr-1 text-orange-500" />
+                        Giáng cấp
+                      </h4>
+                      <div className="space-y-2">
+                        {availableRoles.demotable_roles.map(role => {
+                          const roleInfo = getRoleInfo(role);
+                          return (
+                            <button
+                              key={role}
+                              onClick={() => handleRoleChange(role)}
+                              disabled={roleChangeLoading}
+                              className={`w-full p-3 text-left border-2 rounded-lg transition-all duration-200 hover:border-orange-300 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed ${roleInfo.color}`}
+                            >
+                              <div className="font-medium">{roleInfo.label}</div>
+                              <div className="text-xs opacity-80">{roleInfo.description}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {!availableRoles.can_change_role && (
+                    <div className="text-center py-4">
+                      <Shield className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">
+                        Bạn không có quyền thay đổi vai trò của người dùng này
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={closeRoleChangeModal}
+                    disabled={roleChangeLoading}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                </div>
+
+                {roleChangeLoading && (
+                  <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-xl">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

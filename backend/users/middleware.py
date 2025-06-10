@@ -107,7 +107,7 @@ class WorkflowAccessMiddleware(MiddlewareMixin):
         if not hasattr(request, 'user') or not request.user.is_authenticated:
             return JsonResponse({'error': 'Authentication required'}, status=401)
         
-        if not request.user.workflow_role:
+        if not request.user.workflow_role and not request.user.is_superuser:
             return JsonResponse({
                 'error': 'Workflow access denied',
                 'message': 'You need a workflow role to access this feature'

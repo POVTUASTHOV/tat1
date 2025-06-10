@@ -107,10 +107,8 @@ class ApiService {
           errorMessage = errorData.detail;
         }
       } catch (parseError) {
-        const errorText = await response.text();
-        if (errorText) {
-          errorMessage = errorText;
-        }
+        // If JSON parsing fails, use status text as fallback
+        errorMessage = `API Error: ${response.status} ${response.statusText}`;
       }
       
       if (response.status === 401) {
@@ -576,6 +574,32 @@ class ApiService {
       }
     }
     return this.request<ActivityLog[]>(url);
+  }
+
+  // User role management methods
+  async getUserAvailableRoles(userId: string): Promise<{
+    current_role: string;
+    promotable_roles: string[];
+    demotable_roles: string[];
+    can_change_role: boolean;
+  }> {
+    return this.request(`/users/users/${userId}/available_roles/`);
+  }
+
+  async changeUserRole(userId: string, role: string): Promise<{
+    message: string;
+    user: {
+      id: string;
+      username: string;
+      old_role: string;
+      new_role: string;
+      action_type: string;
+    };
+  }> {
+    return this.request(`/users/users/${userId}/change_role/`, {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    });
   }
 }
 

@@ -52,6 +52,71 @@ class Project(models.Model):
     def get_folders_count(self):
         return self.folders.count()
     
+    def get_assigned_managers(self):
+        """Get all managers assigned to this project"""
+        from users.models import ProjectAssignment, WorkflowRole
+        return User.objects.filter(
+            project_assignments__project=self,
+            project_assignments__is_active=True,
+            workflow_role__name=WorkflowRole.MANAGER
+        ).distinct()
+    
+    def get_assigned_employees(self):
+        """Get all employees assigned to this project"""
+        from users.models import ProjectAssignment, WorkflowRole
+        return User.objects.filter(
+            project_assignments__project=self,
+            project_assignments__is_active=True,
+            workflow_role__name=WorkflowRole.EMPLOYEE
+        ).distinct()
+    
+    def get_all_assigned_users(self):
+        """Get all users (managers and employees) assigned to this project"""
+        from users.models import ProjectAssignment
+        return User.objects.filter(
+            project_assignments__project=self,
+            project_assignments__is_active=True
+        ).distinct()
+    
+    def can_user_access(self, user):
+        """Check if a user can access this project"""
+        # Admin (creator) always has access
+        if self.user == user or user.is_admin_role():
+            return True
+        
+        # Check if user is assigned to this project
+        from users.models import ProjectAssignment
+        return ProjectAssignment.objects.filter(
+            project=self,
+            user=user,
+            is_active=True
+        ).exists()
+    
+    def can_user_assign_files(self, user):
+        """Check if a user can assign files in this project"""
+        # Admin can assign files in any project
+        if user.is_admin_role():
+            return True
+        
+        # Managers can assign files only in their assigned projects
+        if user.is_manager_role():
+            return self.can_user_access(user)
+        
+        return False
+    
+    def get_assignable_files(self):
+        """Get files that can be assigned (not currently assigned)"""
+        return self.files.filter(
+            models.Q(assignment_status__isnull=True) |
+            models.Q(assignment_status__is_assigned=False)
+        )
+    
+    def get_assigned_files(self):
+        """Get files that are currently assigned"""
+        return self.files.filter(
+            assignment_status__is_assigned=True
+        )
+    
     def __str__(self):
         return self.name
 
@@ -217,3 +282,151 @@ class ChunkedUpload(models.Model):
     class Meta:
         db_table = 'storage_chunkedupload'
         unique_together = ('user', 'filename', 'chunk_number', 'project')
+
+class Assignment(models.Model):
+    """Track file assignments to users"""
+    PENDING = 'pending'
+    IN_PROGRESS = 'in_progress'
+    COMPLETED = 'completed'
+    CANCELLED = 'cancelled'
+    
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (IN_PROGRESS, 'In Progress'),
+        (COMPLETED, 'Completed'),
+        (CANCELLED, 'Cancelled'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.ForeignKey(File, on_delete=models.CASCADE, related_name='assignments')
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='file_assignments')
+    assigned_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_files')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='file_assignments')
+    assigned_date = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
+    due_date = models.DateTimeField(null=True, blank=True)
+    completed_date = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'file_assignments'
+        ordering = ['-assigned_date']
+    
+    @classmethod
+    def can_assign_file(cls, file, assigned_to, assigned_by):
+        """Check if a file can be assigned based on business rules"""
+        from django.core.exceptions import ValidationError
+        
+        # Check if file is already assigned
+        try:
+            file_status = file.assignment_status
+            if file_status.is_assigned:
+                return False, f"File '{file.name}' is already assigned to {file_status.assigned_to.username}"
+        except FileStatus.DoesNotExist:
+            # File has no assignment status yet, can be assigned
+            pass
+        
+        # Check if assigned_by has permission to assign files in this project
+        if not file.project.can_user_assign_files(assigned_by):
+            return False, f"You do not have permission to assign files in project '{file.project.name}'"
+        
+        # Check if assigned_to has access to this project
+        if not file.project.can_user_access(assigned_to):
+            return False, f"User '{assigned_to.username}' does not have access to project '{file.project.name}'"
+        
+        # Check if assigned_to is an employee (only employees should receive file assignments)
+        if not assigned_to.is_employee_role():
+            return False, f"Files can only be assigned to employees. '{assigned_to.username}' is not an employee."
+        
+        return True, "Assignment is valid"
+    
+    @classmethod
+    def create_assignment(cls, file, assigned_to, assigned_by, due_date=None, notes=''):
+        """Create a new assignment with validation"""
+        from django.core.exceptions import ValidationError
+        
+        # Validate assignment
+        can_assign, message = cls.can_assign_file(file, assigned_to, assigned_by)
+        if not can_assign:
+            raise ValidationError(message)
+        
+        # Create assignment
+        assignment = cls.objects.create(
+            file=file,
+            assigned_to=assigned_to,
+            assigned_by=assigned_by,
+            project=file.project,
+            due_date=due_date,
+            notes=notes
+        )
+        
+        return assignment
+    
+    def can_change_status(self, new_status, user):
+        """Check if a user can change the assignment status"""
+        # Assigned user can change status to in_progress or completed
+        if user == self.assigned_to and new_status in [self.IN_PROGRESS, self.COMPLETED]:
+            return True, "Status change allowed"
+        
+        # Assigner can change status to cancelled or back to pending
+        if user == self.assigned_by and new_status in [self.CANCELLED, self.PENDING]:
+            return True, "Status change allowed"
+        
+        # Admin can change any status
+        if user.is_admin_role():
+            return True, "Admin can change any status"
+        
+        # Managers can change status for assignments in their projects
+        if user.is_manager_role() and self.project.can_user_access(user):
+            return True, "Manager can change status in assigned project"
+        
+        return False, "You do not have permission to change this assignment status"
+    
+    def update_status(self, new_status, user, notes=''):
+        """Update assignment status with validation"""
+        from django.core.exceptions import ValidationError
+        
+        can_change, message = self.can_change_status(new_status, user)
+        if not can_change:
+            raise ValidationError(message)
+        
+        old_status = self.status
+        self.status = new_status
+        if notes:
+            self.notes = f"{self.notes}\n{notes}" if self.notes else notes
+        
+        self.save()
+        
+        return f"Assignment status changed from {old_status} to {new_status}"
+    
+    def save(self, *args, **kwargs):
+        if self.status == self.COMPLETED and not self.completed_date:
+            from django.utils import timezone
+            self.completed_date = timezone.now()
+        super().save(*args, **kwargs)
+        
+        # Update file status
+        FileStatus.objects.update_or_create(
+            file=self.file,
+            defaults={
+                'is_assigned': self.status in [self.PENDING, self.IN_PROGRESS],
+                'assigned_to': self.assigned_to if self.status in [self.PENDING, self.IN_PROGRESS] else None,
+                'last_assignment': self
+            }
+        )
+    
+    def __str__(self):
+        return f"{self.file.name} → {self.assigned_to.username} ({self.status})"
+
+class FileStatus(models.Model):
+    """Track current assignment status of files"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.OneToOneField(File, on_delete=models.CASCADE, related_name='assignment_status')
+    is_assigned = models.BooleanField(default=False)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='currently_assigned_files')
+    last_assignment = models.ForeignKey(Assignment, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'file_status'
