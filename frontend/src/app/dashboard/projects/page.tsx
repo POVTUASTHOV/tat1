@@ -217,21 +217,12 @@ export default function ProjectsPage() {
     try {
       const result = await apiService.deleteFile(fileId);
       
-      if (result.warning) {
-        addToast({
-          type: 'warning',
-          title: 'Partial Deletion',
-          message: `${fileName}: ${result.warning}`,
-          duration: 8000
-        });
-      } else {
-        addToast({
-          type: 'success',
-          title: 'File Deleted',
-          message: `${fileName} has been permanently deleted`,
-          duration: 4000
-        });
-      }
+      addToast({
+        type: 'success',
+        title: 'File Deleted',
+        message: result.message || `${fileName} has been permanently deleted`,
+        duration: 4000
+      });
       
       await loadProjects();
     } catch (error) {
@@ -693,7 +684,10 @@ export default function ProjectsPage() {
           onExtractComplete={() => {
             setShowArchivePreview(false);
             setSelectedFile(null);
-            loadProjects();
+            // Small delay to ensure database transaction is committed
+            setTimeout(() => {
+              loadProjects();
+            }, 500);
           }}
         />
       )}

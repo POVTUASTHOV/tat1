@@ -31868,3 +31868,490 @@ INFO 2025-06-10 10:08:59,723 main 13734 126341458585088 GPU 0: NVIDIA GeForce GT
 INFO 2025-06-10 10:30:07,488 main 40128 127491366569472 Video processing module loaded successfully
 INFO 2025-06-10 10:30:07,515 main 40128 127491366569472 NVIDIA GPU detected: 1 GPU(s)
 INFO 2025-06-10 10:30:07,515 main 40128 127491366569472 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 25% utilization, 10.0% VRAM
+INFO 2025-06-10 10:41:19,130 main 53406 126315248207360 Video processing module loaded successfully
+INFO 2025-06-10 10:41:19,158 main 53406 126315248207360 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:41:19,158 main 53406 126315248207360 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 17% utilization, 10.6% VRAM
+INFO 2025-06-10 10:41:28,533 main 53707 131214427186688 Video processing module loaded successfully
+INFO 2025-06-10 10:41:28,563 main 53707 131214427186688 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:41:28,563 main 53707 131214427186688 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 22% utilization, 10.6% VRAM
+INFO 2025-06-10 10:41:34,669 main 53884 134679320557056 Video processing module loaded successfully
+INFO 2025-06-10 10:41:34,697 main 53884 134679320557056 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:41:34,698 main 53884 134679320557056 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 14% utilization, 10.6% VRAM
+INFO 2025-06-10 10:41:40,669 main 54065 139662670722560 Video processing module loaded successfully
+INFO 2025-06-10 10:41:40,697 main 54065 139662670722560 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:41:40,697 main 54065 139662670722560 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 21% utilization, 10.6% VRAM
+INFO 2025-06-10 10:41:47,382 main 54258 128167139345920 Video processing module loaded successfully
+INFO 2025-06-10 10:41:47,419 main 54258 128167139345920 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:41:47,419 main 54258 128167139345920 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 19% utilization, 10.6% VRAM
+INFO 2025-06-10 10:45:02,647 main 58244 128247049164288 Video processing module loaded successfully
+INFO 2025-06-10 10:45:02,678 main 58244 128247049164288 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:45:02,678 main 58244 128247049164288 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 33% utilization, 10.8% VRAM
+INFO 2025-06-10 10:47:13,166 main 61122 137289846691328 Video processing module loaded successfully
+INFO 2025-06-10 10:47:13,201 main 61122 137289846691328 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:47:13,201 main 61122 137289846691328 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 30% utilization, 11.0% VRAM
+INFO 2025-06-10 10:49:22,743 main 63913 134191463245312 Video processing module loaded successfully
+INFO 2025-06-10 10:49:22,771 main 63913 134191463245312 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:49:22,772 main 63913 134191463245312 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 18% utilization, 10.7% VRAM
+INFO 2025-06-10 10:49:34,095 main 64236 129917795366400 Video processing module loaded successfully
+INFO 2025-06-10 10:49:34,123 main 64236 129917795366400 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:49:34,123 main 64236 129917795366400 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 19% utilization, 10.4% VRAM
+INFO 2025-06-10 10:49:46,386 main 64588 126912642790912 Video processing module loaded successfully
+INFO 2025-06-10 10:49:46,421 main 64588 126912642790912 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:49:46,421 main 64588 126912642790912 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 19% utilization, 10.4% VRAM
+INFO 2025-06-10 10:56:05,934 main 72261 135875010373120 Video processing module loaded successfully
+INFO 2025-06-10 10:56:05,965 main 72261 135875010373120 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:56:05,965 main 72261 135875010373120 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 27% utilization, 9.8% VRAM
+INFO 2025-06-10 10:56:16,257 main 72596 126504517953024 Video processing module loaded successfully
+INFO 2025-06-10 10:56:16,286 main 72596 126504517953024 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:56:16,286 main 72596 126504517953024 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 37% utilization, 10.1% VRAM
+INFO 2025-06-10 10:58:30,198 main 75664 126428737103360 Video processing module loaded successfully
+INFO 2025-06-10 10:58:30,233 main 75664 126428737103360 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:58:30,233 main 75664 126428737103360 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 22% utilization, 11.4% VRAM
+INFO 2025-06-10 10:58:43,512 main 76042 135460779120128 Video processing module loaded successfully
+INFO 2025-06-10 10:58:43,535 main 76042 135460779120128 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:58:43,535 main 76042 135460779120128 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 12% utilization, 13.1% VRAM
+INFO 2025-06-10 10:59:19,692 main 76864 133042202007040 Video processing module loaded successfully
+INFO 2025-06-10 10:59:19,719 main 76864 133042202007040 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 10:59:19,719 main 76864 133042202007040 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 1% utilization, 11.1% VRAM
+INFO 2025-06-10 11:12:31,842 main 91839 139707547080192 Video processing module loaded successfully
+INFO 2025-06-10 11:12:31,877 main 91839 139707547080192 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 11:12:31,878 main 91839 139707547080192 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 33% utilization, 12.1% VRAM
+INFO 2025-06-10 11:12:44,947 main 92221 131979333318144 Video processing module loaded successfully
+INFO 2025-06-10 11:12:44,975 main 92221 131979333318144 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 11:12:44,975 main 92221 131979333318144 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 22% utilization, 12.1% VRAM
+INFO 2025-06-10 11:12:57,585 main 92572 133296935912960 Video processing module loaded successfully
+INFO 2025-06-10 11:12:57,616 main 92572 133296935912960 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 11:12:57,616 main 92572 133296935912960 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 21% utilization, 12.1% VRAM
+INFO 2025-06-10 11:13:04,866 main 92816 134783426291200 Video processing module loaded successfully
+INFO 2025-06-10 11:13:04,902 main 92816 134783426291200 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-10 11:13:04,902 main 92816 134783426291200 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 21% utilization, 12.1% VRAM
+INFO 2025-06-11 02:24:14,303 main 28881 133027542996480 Video processing module loaded successfully
+INFO 2025-06-11 02:24:14,343 main 28881 133027542996480 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 02:24:14,343 main 28881 133027542996480 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 13% utilization, 9.5% VRAM
+INFO 2025-06-11 02:41:24,008 main 48887 123592807115648 Video processing module loaded successfully
+INFO 2025-06-11 02:41:24,043 main 48887 123592807115648 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 02:41:24,043 main 48887 123592807115648 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 15% utilization, 8.5% VRAM
+INFO 2025-06-11 03:26:47,492 main 99005 129384097483648 Video processing module loaded successfully
+INFO 2025-06-11 03:26:47,521 main 99005 129384097483648 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:26:47,521 main 99005 129384097483648 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 29% utilization, 11.1% VRAM
+INFO 2025-06-11 03:27:12,766 main 99606 138159914986368 Video processing module loaded successfully
+INFO 2025-06-11 03:27:12,794 main 99606 138159914986368 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:27:12,794 main 99606 138159914986368 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 35% utilization, 10.7% VRAM
+INFO 2025-06-11 03:27:49,392 main 100429 130900140600192 Video processing module loaded successfully
+INFO 2025-06-11 03:27:49,422 main 100429 130900140600192 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:27:49,423 main 100429 130900140600192 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 34% utilization, 11.1% VRAM
+INFO 2025-06-11 03:28:21,137 main 101210 129676140174208 Video processing module loaded successfully
+INFO 2025-06-11 03:28:21,168 main 101210 129676140174208 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:28:21,168 main 101210 129676140174208 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 34% utilization, 12.2% VRAM
+INFO 2025-06-11 03:31:18,083 main 105343 128469048507264 Video processing module loaded successfully
+INFO 2025-06-11 03:31:18,109 main 105343 128469048507264 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:31:18,109 main 105343 128469048507264 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 16% utilization, 11.4% VRAM
+INFO 2025-06-11 03:31:50,761 main 106147 133167463709568 Video processing module loaded successfully
+INFO 2025-06-11 03:31:50,797 main 106147 133167463709568 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:31:50,798 main 106147 133167463709568 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 27% utilization, 11.8% VRAM
+INFO 2025-06-11 03:32:16,006 main 106781 137522248321920 Video processing module loaded successfully
+INFO 2025-06-11 03:32:16,030 main 106781 137522248321920 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 03:32:16,030 main 106781 137522248321920 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 47% utilization, 11.6% VRAM
+INFO 2025-06-11 04:21:25,345 main 165691 130523882527616 Video processing module loaded successfully
+INFO 2025-06-11 04:21:25,384 main 165691 130523882527616 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 04:21:25,385 main 165691 130523882527616 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 15% utilization, 14.0% VRAM
+WARNING 2025-06-11 04:31:52,854 models 165692 134958399092416 File not found on disk: /media/tat/backup/project/data_management/backend/media/user_fc704ab0-c2b2-4291-80b6-ed0a8849acde/abc/dataset/images.zip
+ERROR 2025-06-11 04:31:52,861 views 165692 134958399092416 Error deleting file 228bd21b-4e42-427e-aaa8-1251c037bbe6: (1146, "Table 'nas_db.file_assignments' doesn't exist")
+INFO 2025-06-11 07:27:05,589 main 374105 125322740362112 Video processing module loaded successfully
+INFO 2025-06-11 07:27:05,616 main 374105 125322740362112 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 07:27:05,616 main 374105 125322740362112 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 51% utilization, 15.5% VRAM
+INFO 2025-06-11 07:27:30,278 main 374762 139133049686912 Video processing module loaded successfully
+INFO 2025-06-11 07:27:30,307 main 374762 139133049686912 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 07:27:30,307 main 374762 139133049686912 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 25% utilization, 14.9% VRAM
+INFO 2025-06-11 07:27:45,833 main 375133 129637092842368 Video processing module loaded successfully
+INFO 2025-06-11 07:27:45,862 main 375133 129637092842368 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 07:27:45,862 main 375133 129637092842368 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 32% utilization, 14.6% VRAM
+INFO 2025-06-11 09:22:59,554 main 47552 127661966220160 Video processing module loaded successfully
+INFO 2025-06-11 09:22:59,599 main 47552 127661966220160 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 09:22:59,600 main 47552 127661966220160 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 8% utilization, 10.5% VRAM
+ERROR 2025-06-11 09:22:59,606 main 47552 127661966220160 Cleanup error: 'cryptography' package is required for sha256_password or caching_sha2_password auth methods
+INFO 2025-06-11 09:23:31,019 main 48297 128130589514624 Video processing module loaded successfully
+INFO 2025-06-11 09:23:31,054 main 48297 128130589514624 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 09:23:31,055 main 48297 128130589514624 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 38% utilization, 12.3% VRAM
+ERROR 2025-06-11 09:23:31,058 main 48297 128130589514624 Cleanup error: no such column: storage_chunkedupload.project_id
+INFO 2025-06-11 09:23:36,852 main 48452 128497224485760 Video processing module loaded successfully
+INFO 2025-06-11 09:23:36,894 main 48452 128497224485760 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 09:23:36,894 main 48452 128497224485760 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 24% utilization, 12.0% VRAM
+ERROR 2025-06-11 09:23:36,901 main 48452 128497224485760 Cleanup error: no such column: storage_chunkedupload.project_id
+INFO 2025-06-11 09:27:09,955 main 52817 126253680425856 Video processing module loaded successfully
+INFO 2025-06-11 09:27:09,983 main 52817 126253680425856 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 09:27:09,983 main 52817 126253680425856 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 32% utilization, 10.9% VRAM
+INFO 2025-06-11 09:28:10,930 main 54222 137883340409728 Video processing module loaded successfully
+INFO 2025-06-11 09:28:10,963 main 54222 137883340409728 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 09:28:10,963 main 54222 137883340409728 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 19% utilization, 11.3% VRAM
+INFO 2025-06-11 09:30:47,052 main 57818 129545305103232 Video processing module loaded successfully
+INFO 2025-06-11 09:30:47,084 main 57818 129545305103232 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 09:30:47,084 main 57818 129545305103232 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 35% utilization, 12.2% VRAM
+INFO 2025-06-11 09:57:49,919 main 57818 129545305103232 Uploading chunk 0/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,034 main 57818 129545305103232 Uploading chunk 1/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,106 main 57818 129545305103232 Uploading chunk 2/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,174 main 57818 129545305103232 Uploading chunk 3/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,244 main 57818 129545305103232 Uploading chunk 4/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,341 main 57818 129545305103232 Uploading chunk 5/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,414 main 57818 129545305103232 Uploading chunk 6/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,486 main 57818 129545305103232 Uploading chunk 7/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,557 main 57818 129545305103232 Uploading chunk 8/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,629 main 57818 129545305103232 Uploading chunk 9/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,695 main 57818 129545305103232 Uploading chunk 10/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,763 main 57818 129545305103232 Uploading chunk 11/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,832 main 57818 129545305103232 Uploading chunk 12/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,902 main 57818 129545305103232 Uploading chunk 13/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:50,973 main 57818 129545305103232 Uploading chunk 14/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,044 main 57818 129545305103232 Uploading chunk 15/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,110 main 57818 129545305103232 Uploading chunk 16/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,179 main 57818 129545305103232 Uploading chunk 17/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,248 main 57818 129545305103232 Uploading chunk 18/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,343 main 57818 129545305103232 Uploading chunk 19/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,412 main 57818 129545305103232 Uploading chunk 20/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,480 main 57818 129545305103232 Uploading chunk 21/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,548 main 57818 129545305103232 Uploading chunk 22/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,607 main 57818 129545305103232 Uploading chunk 23/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,676 main 57818 129545305103232 Uploading chunk 24/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,743 main 57818 129545305103232 Uploading chunk 25/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,812 main 57818 129545305103232 Uploading chunk 26/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,881 main 57818 129545305103232 Uploading chunk 27/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:51,969 main 57818 129545305103232 Uploading chunk 28/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,050 main 57818 129545305103232 Uploading chunk 29/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,133 main 57818 129545305103232 Uploading chunk 30/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,206 main 57818 129545305103232 Uploading chunk 31/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,282 main 57818 129545305103232 Uploading chunk 32/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,358 main 57818 129545305103232 Uploading chunk 33/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,427 main 57818 129545305103232 Uploading chunk 34/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,497 main 57818 129545305103232 Uploading chunk 35/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,566 main 57818 129545305103232 Uploading chunk 36/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,637 main 57818 129545305103232 Uploading chunk 37/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,705 main 57818 129545305103232 Uploading chunk 38/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,775 main 57818 129545305103232 Uploading chunk 39/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,844 main 57818 129545305103232 Uploading chunk 40/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,912 main 57818 129545305103232 Uploading chunk 41/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:52,978 main 57818 129545305103232 Uploading chunk 42/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,049 main 57818 129545305103232 Uploading chunk 43/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,118 main 57818 129545305103232 Uploading chunk 44/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,191 main 57818 129545305103232 Uploading chunk 45/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,263 main 57818 129545305103232 Uploading chunk 46/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,336 main 57818 129545305103232 Uploading chunk 47/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,406 main 57818 129545305103232 Uploading chunk 48/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,478 main 57818 129545305103232 Uploading chunk 49/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,548 main 57818 129545305103232 Uploading chunk 50/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,616 main 57818 129545305103232 Uploading chunk 51/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,684 main 57818 129545305103232 Uploading chunk 52/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,754 main 57818 129545305103232 Uploading chunk 53/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,828 main 57818 129545305103232 Uploading chunk 54/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,899 main 57818 129545305103232 Uploading chunk 55/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:53,985 main 57818 129545305103232 Uploading chunk 56/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,061 main 57818 129545305103232 Uploading chunk 57/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,130 main 57818 129545305103232 Uploading chunk 58/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,199 main 57818 129545305103232 Uploading chunk 59/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,268 main 57818 129545305103232 Uploading chunk 60/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,342 main 57818 129545305103232 Uploading chunk 61/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,409 main 57818 129545305103232 Uploading chunk 62/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,476 main 57818 129545305103232 Uploading chunk 63/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,543 main 57818 129545305103232 Uploading chunk 64/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,610 main 57818 129545305103232 Uploading chunk 65/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,682 main 57818 129545305103232 Uploading chunk 66/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,784 main 57818 129545305103232 Uploading chunk 67/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,874 main 57818 129545305103232 Uploading chunk 68/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:54,942 main 57818 129545305103232 Uploading chunk 69/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,014 main 57818 129545305103232 Uploading chunk 70/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,084 main 57818 129545305103232 Uploading chunk 71/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,156 main 57818 129545305103232 Uploading chunk 72/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,226 main 57818 129545305103232 Uploading chunk 73/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,297 main 57818 129545305103232 Uploading chunk 74/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,395 main 57818 129545305103232 Uploading chunk 75/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,468 main 57818 129545305103232 Uploading chunk 76/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,538 main 57818 129545305103232 Uploading chunk 77/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,607 main 57818 129545305103232 Uploading chunk 78/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,678 main 57818 129545305103232 Uploading chunk 79/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,747 main 57818 129545305103232 Uploading chunk 80/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,816 main 57818 129545305103232 Uploading chunk 81/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,889 main 57818 129545305103232 Uploading chunk 82/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:55,969 main 57818 129545305103232 Uploading chunk 83/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,040 main 57818 129545305103232 Uploading chunk 84/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,114 main 57818 129545305103232 Uploading chunk 85/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,190 main 57818 129545305103232 Uploading chunk 86/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,258 main 57818 129545305103232 Uploading chunk 87/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,359 main 57818 129545305103232 Uploading chunk 88/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,429 main 57818 129545305103232 Uploading chunk 89/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,500 main 57818 129545305103232 Uploading chunk 90/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,657 main 57818 129545305103232 Uploading chunk 91/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,727 main 57818 129545305103232 Uploading chunk 92/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,796 main 57818 129545305103232 Uploading chunk 93/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,868 main 57818 129545305103232 Uploading chunk 94/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:56,939 main 57818 129545305103232 Uploading chunk 95/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,008 main 57818 129545305103232 Uploading chunk 96/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,081 main 57818 129545305103232 Uploading chunk 97/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,152 main 57818 129545305103232 Uploading chunk 98/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,222 main 57818 129545305103232 Uploading chunk 99/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,296 main 57818 129545305103232 Uploading chunk 100/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,367 main 57818 129545305103232 Uploading chunk 101/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,437 main 57818 129545305103232 Uploading chunk 102/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,506 main 57818 129545305103232 Uploading chunk 103/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,574 main 57818 129545305103232 Uploading chunk 104/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,646 main 57818 129545305103232 Uploading chunk 105/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,719 main 57818 129545305103232 Uploading chunk 106/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,793 main 57818 129545305103232 Uploading chunk 107/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,869 main 57818 129545305103232 Uploading chunk 108/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:57,942 main 57818 129545305103232 Uploading chunk 109/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,011 main 57818 129545305103232 Uploading chunk 110/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,081 main 57818 129545305103232 Uploading chunk 111/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,156 main 57818 129545305103232 Uploading chunk 112/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,230 main 57818 129545305103232 Uploading chunk 113/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,304 main 57818 129545305103232 Uploading chunk 114/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,375 main 57818 129545305103232 Uploading chunk 115/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,446 main 57818 129545305103232 Uploading chunk 116/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,515 main 57818 129545305103232 Uploading chunk 117/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,584 main 57818 129545305103232 Uploading chunk 118/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,655 main 57818 129545305103232 Uploading chunk 119/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,721 main 57818 129545305103232 Uploading chunk 120/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,793 main 57818 129545305103232 Uploading chunk 121/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,864 main 57818 129545305103232 Uploading chunk 122/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:58,938 main 57818 129545305103232 Uploading chunk 123/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,007 main 57818 129545305103232 Uploading chunk 124/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,086 main 57818 129545305103232 Uploading chunk 125/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,175 main 57818 129545305103232 Uploading chunk 126/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,246 main 57818 129545305103232 Uploading chunk 127/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,318 main 57818 129545305103232 Uploading chunk 128/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,391 main 57818 129545305103232 Uploading chunk 129/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,464 main 57818 129545305103232 Uploading chunk 130/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,560 main 57818 129545305103232 Uploading chunk 131/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,633 main 57818 129545305103232 Uploading chunk 132/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,703 main 57818 129545305103232 Uploading chunk 133/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,772 main 57818 129545305103232 Uploading chunk 134/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,843 main 57818 129545305103232 Uploading chunk 135/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,915 main 57818 129545305103232 Uploading chunk 136/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:57:59,982 main 57818 129545305103232 Uploading chunk 137/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,056 main 57818 129545305103232 Uploading chunk 138/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,127 main 57818 129545305103232 Uploading chunk 139/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,201 main 57818 129545305103232 Uploading chunk 140/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,271 main 57818 129545305103232 Uploading chunk 141/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,377 main 57818 129545305103232 Uploading chunk 142/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,447 main 57818 129545305103232 Uploading chunk 143/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,517 main 57818 129545305103232 Uploading chunk 144/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,585 main 57818 129545305103232 Uploading chunk 145/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,657 main 57818 129545305103232 Uploading chunk 146/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,727 main 57818 129545305103232 Uploading chunk 147/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,798 main 57818 129545305103232 Uploading chunk 148/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,871 main 57818 129545305103232 Uploading chunk 149/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:00,945 main 57818 129545305103232 Uploading chunk 150/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,038 main 57818 129545305103232 Uploading chunk 151/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,131 main 57818 129545305103232 Uploading chunk 152/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,219 main 57818 129545305103232 Uploading chunk 153/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,289 main 57818 129545305103232 Uploading chunk 154/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,364 main 57818 129545305103232 Uploading chunk 155/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,434 main 57818 129545305103232 Uploading chunk 156/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,505 main 57818 129545305103232 Uploading chunk 157/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,576 main 57818 129545305103232 Uploading chunk 158/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,659 main 57818 129545305103232 Uploading chunk 159/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,728 main 57818 129545305103232 Uploading chunk 160/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,801 main 57818 129545305103232 Uploading chunk 161/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,874 main 57818 129545305103232 Uploading chunk 162/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:01,945 main 57818 129545305103232 Uploading chunk 163/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,016 main 57818 129545305103232 Uploading chunk 164/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,089 main 57818 129545305103232 Uploading chunk 165/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,159 main 57818 129545305103232 Uploading chunk 166/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,231 main 57818 129545305103232 Uploading chunk 167/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,301 main 57818 129545305103232 Uploading chunk 168/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,372 main 57818 129545305103232 Uploading chunk 169/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,435 main 57818 129545305103232 Uploading chunk 170/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,503 main 57818 129545305103232 Uploading chunk 171/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,580 main 57818 129545305103232 Uploading chunk 172/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,651 main 57818 129545305103232 Uploading chunk 173/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,721 main 57818 129545305103232 Uploading chunk 174/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,794 main 57818 129545305103232 Uploading chunk 175/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,864 main 57818 129545305103232 Uploading chunk 176/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:02,937 main 57818 129545305103232 Uploading chunk 177/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,008 main 57818 129545305103232 Uploading chunk 178/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,079 main 57818 129545305103232 Uploading chunk 179/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,150 main 57818 129545305103232 Uploading chunk 180/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,218 main 57818 129545305103232 Uploading chunk 181/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,292 main 57818 129545305103232 Uploading chunk 182/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,363 main 57818 129545305103232 Uploading chunk 183/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,461 main 57818 129545305103232 Uploading chunk 184/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,531 main 57818 129545305103232 Uploading chunk 185/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,602 main 57818 129545305103232 Uploading chunk 186/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,673 main 57818 129545305103232 Uploading chunk 187/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,740 main 57818 129545305103232 Uploading chunk 188/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,815 main 57818 129545305103232 Uploading chunk 189/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,886 main 57818 129545305103232 Uploading chunk 190/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:03,956 main 57818 129545305103232 Uploading chunk 191/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,030 main 57818 129545305103232 Uploading chunk 192/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,102 main 57818 129545305103232 Uploading chunk 193/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,170 main 57818 129545305103232 Uploading chunk 194/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,279 main 57818 129545305103232 Uploading chunk 195/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,348 main 57818 129545305103232 Uploading chunk 196/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,420 main 57818 129545305103232 Uploading chunk 197/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,493 main 57818 129545305103232 Uploading chunk 198/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,647 main 57818 129545305103232 Uploading chunk 199/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,720 main 57818 129545305103232 Uploading chunk 200/202 for file DJI_0378_W_labeled.zip
+INFO 2025-06-11 09:58:04,826 main 57818 129545305103232 Uploading chunk 201/202 for file DJI_0378_W_labeled.zip
+ERROR 2025-06-11 09:58:47,760 views 79259 130409350289088 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+ERROR 2025-06-11 10:05:04,549 views 79259 130409350289088 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+ERROR 2025-06-11 10:05:11,266 views 79259 130409350289088 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+ERROR 2025-06-11 10:05:57,729 views 103486 131758007772864 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+INFO 2025-06-11 10:06:24,344 main 104280 134696636107648 Video processing module loaded successfully
+INFO 2025-06-11 10:06:24,377 main 104280 134696636107648 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:06:24,378 main 104280 134696636107648 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 8% utilization, 11.0% VRAM
+ERROR 2025-06-11 10:06:28,603 views 103486 131758007772864 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+ERROR 2025-06-11 10:06:34,409 views 103486 131758007772864 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+INFO 2025-06-11 10:10:33,862 main 109111 128122022562688 Video processing module loaded successfully
+INFO 2025-06-11 10:10:33,896 main 109111 128122022562688 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:10:33,896 main 109111 128122022562688 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 42% utilization, 11.4% VRAM
+INFO 2025-06-11 10:10:49,453 main 109519 126866084285312 Video processing module loaded successfully
+INFO 2025-06-11 10:10:49,480 main 109519 126866084285312 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:10:49,480 main 109519 126866084285312 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 17% utilization, 11.5% VRAM
+INFO 2025-06-11 10:11:23,302 main 110392 124795395861376 Video processing module loaded successfully
+INFO 2025-06-11 10:11:23,333 main 110392 124795395861376 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:11:23,333 main 110392 124795395861376 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 29% utilization, 11.4% VRAM
+INFO 2025-06-11 10:11:42,907 main 110923 139348804549504 Video processing module loaded successfully
+INFO 2025-06-11 10:11:42,934 main 110923 139348804549504 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:11:42,934 main 110923 139348804549504 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 18% utilization, 11.4% VRAM
+INFO 2025-06-11 10:11:48,972 main 111111 137458923187072 Video processing module loaded successfully
+INFO 2025-06-11 10:11:49,008 main 111111 137458923187072 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:11:49,008 main 111111 137458923187072 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 14% utilization, 10.9% VRAM
+INFO 2025-06-11 10:11:54,859 main 111284 134161948318592 Video processing module loaded successfully
+INFO 2025-06-11 10:11:54,893 main 111284 134161948318592 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:11:54,893 main 111284 134161948318592 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 20% utilization, 10.9% VRAM
+INFO 2025-06-11 10:12:01,046 main 111450 126960519568256 Video processing module loaded successfully
+INFO 2025-06-11 10:12:01,079 main 111450 126960519568256 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:12:01,080 main 111450 126960519568256 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 17% utilization, 10.9% VRAM
+ERROR 2025-06-11 10:12:36,439 views 111449 135852917257920 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+ERROR 2025-06-11 10:12:55,256 views 112727 126244428445376 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: [Errno 111] Connection refused
+INFO 2025-06-11 10:16:52,579 main 118292 128964559264640 Video processing module loaded successfully
+INFO 2025-06-11 10:16:52,606 main 118292 128964559264640 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:16:52,606 main 118292 128964559264640 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 35% utilization, 11.3% VRAM
+ERROR 2025-06-11 10:18:14,083 views 118293 140254754363072 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: Storage can not find an available filename for "user_99a076c2-3ccf-41f8-b58e-a4d54fd58070/abc/dataset/DJI_0378_W_labeled/DJI_0378_W_labeled/DJI_0378_W_1890_4LzNFsM.jpg". Please make sure that the corresponding file field allows sufficient "max_length".
+INFO 2025-06-11 10:19:33,138 main 121912 134260616711040 Video processing module loaded successfully
+INFO 2025-06-11 10:19:33,164 main 121912 134260616711040 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:19:33,164 main 121912 134260616711040 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 40% utilization, 11.6% VRAM
+ERROR 2025-06-11 10:19:58,931 views 121918 135731928221376 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: UNIQUE constraint failed: storage_folder.name, storage_folder.parent_id, storage_folder.user_id
+INFO 2025-06-11 10:21:49,383 main 124895 123471315581824 Video processing module loaded successfully
+INFO 2025-06-11 10:21:49,414 main 124895 123471315581824 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:21:49,414 main 124895 123471315581824 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 21% utilization, 10.6% VRAM
+ERROR 2025-06-11 10:22:43,516 views 124919 128352874653376 Archive extraction error for file 5ed9e935-9890-498f-8890-91af51d60fff: UNIQUE constraint failed: storage_folder.name, storage_folder.parent_id, storage_folder.user_id
+INFO 2025-06-11 10:23:47,185 main 127522 139591279307648 Video processing module loaded successfully
+INFO 2025-06-11 10:23:47,218 main 127522 139591279307648 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:23:47,219 main 127522 139591279307648 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 5% utilization, 11.0% VRAM
+INFO 2025-06-11 10:31:24,772 main 137109 139624943524736 Video processing module loaded successfully
+INFO 2025-06-11 10:31:24,804 main 137109 139624943524736 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-11 10:31:24,804 main 137109 139624943524736 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 29% utilization, 12.6% VRAM
+WARNING 2025-06-11 10:32:58,473 models 137121 130947367302848 File not found on disk: /media/tat/backup/project/data_management/backend/media/user_99a076c2-3ccf-41f8-b58e-a4d54fd58070/abc/dataset/DJI_0378_W_labeled.zip
+INFO 2025-06-11 10:32:58,516 views 137121 130947367302848 File completely deleted: DJI_0378_W_labeled.zip by user 99a076c2-3ccf-41f8-b58e-a4d54fd58070
+INFO 2025-06-11 10:38:24,862 main 137109 139624943524736 Uploading chunk 0/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:24,971 main 137109 139624943524736 Uploading chunk 1/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,064 main 137109 139624943524736 Uploading chunk 2/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,138 main 137109 139624943524736 Uploading chunk 3/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,208 main 137109 139624943524736 Uploading chunk 4/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,281 main 137109 139624943524736 Uploading chunk 5/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,353 main 137109 139624943524736 Uploading chunk 6/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,424 main 137109 139624943524736 Uploading chunk 7/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,494 main 137109 139624943524736 Uploading chunk 8/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,574 main 137109 139624943524736 Uploading chunk 9/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,653 main 137109 139624943524736 Uploading chunk 10/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,726 main 137109 139624943524736 Uploading chunk 11/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,802 main 137109 139624943524736 Uploading chunk 12/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,879 main 137109 139624943524736 Uploading chunk 13/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:25,958 main 137109 139624943524736 Uploading chunk 14/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,050 main 137109 139624943524736 Uploading chunk 15/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,127 main 137109 139624943524736 Uploading chunk 16/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,203 main 137109 139624943524736 Uploading chunk 17/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,280 main 137109 139624943524736 Uploading chunk 18/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,353 main 137109 139624943524736 Uploading chunk 19/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,425 main 137109 139624943524736 Uploading chunk 20/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,495 main 137109 139624943524736 Uploading chunk 21/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,563 main 137109 139624943524736 Uploading chunk 22/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,630 main 137109 139624943524736 Uploading chunk 23/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,698 main 137109 139624943524736 Uploading chunk 24/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,768 main 137109 139624943524736 Uploading chunk 25/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,836 main 137109 139624943524736 Uploading chunk 26/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,908 main 137109 139624943524736 Uploading chunk 27/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:26,978 main 137109 139624943524736 Uploading chunk 28/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,050 main 137109 139624943524736 Uploading chunk 29/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,120 main 137109 139624943524736 Uploading chunk 30/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,190 main 137109 139624943524736 Uploading chunk 31/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,270 main 137109 139624943524736 Uploading chunk 32/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,340 main 137109 139624943524736 Uploading chunk 33/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,412 main 137109 139624943524736 Uploading chunk 34/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,496 main 137109 139624943524736 Uploading chunk 35/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,568 main 137109 139624943524736 Uploading chunk 36/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,639 main 137109 139624943524736 Uploading chunk 37/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,709 main 137109 139624943524736 Uploading chunk 38/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,781 main 137109 139624943524736 Uploading chunk 39/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,854 main 137109 139624943524736 Uploading chunk 40/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,927 main 137109 139624943524736 Uploading chunk 41/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:27,998 main 137109 139624943524736 Uploading chunk 42/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,082 main 137109 139624943524736 Uploading chunk 43/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,154 main 137109 139624943524736 Uploading chunk 44/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,228 main 137109 139624943524736 Uploading chunk 45/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,300 main 137109 139624943524736 Uploading chunk 46/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,373 main 137109 139624943524736 Uploading chunk 47/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,444 main 137109 139624943524736 Uploading chunk 48/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,517 main 137109 139624943524736 Uploading chunk 49/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,611 main 137109 139624943524736 Uploading chunk 50/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,681 main 137109 139624943524736 Uploading chunk 51/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,781 main 137109 139624943524736 Uploading chunk 52/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,852 main 137109 139624943524736 Uploading chunk 53/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,924 main 137109 139624943524736 Uploading chunk 54/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:28,995 main 137109 139624943524736 Uploading chunk 55/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,068 main 137109 139624943524736 Uploading chunk 56/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,142 main 137109 139624943524736 Uploading chunk 57/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,217 main 137109 139624943524736 Uploading chunk 58/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,287 main 137109 139624943524736 Uploading chunk 59/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,357 main 137109 139624943524736 Uploading chunk 60/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,427 main 137109 139624943524736 Uploading chunk 61/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,497 main 137109 139624943524736 Uploading chunk 62/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,569 main 137109 139624943524736 Uploading chunk 63/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,638 main 137109 139624943524736 Uploading chunk 64/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,709 main 137109 139624943524736 Uploading chunk 65/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,786 main 137109 139624943524736 Uploading chunk 66/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,861 main 137109 139624943524736 Uploading chunk 67/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:29,930 main 137109 139624943524736 Uploading chunk 68/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,000 main 137109 139624943524736 Uploading chunk 69/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,090 main 137109 139624943524736 Uploading chunk 70/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,164 main 137109 139624943524736 Uploading chunk 71/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,233 main 137109 139624943524736 Uploading chunk 72/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,305 main 137109 139624943524736 Uploading chunk 73/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,378 main 137109 139624943524736 Uploading chunk 74/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,449 main 137109 139624943524736 Uploading chunk 75/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,517 main 137109 139624943524736 Uploading chunk 76/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,586 main 137109 139624943524736 Uploading chunk 77/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,656 main 137109 139624943524736 Uploading chunk 78/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,727 main 137109 139624943524736 Uploading chunk 79/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,795 main 137109 139624943524736 Uploading chunk 80/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,867 main 137109 139624943524736 Uploading chunk 81/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:30,937 main 137109 139624943524736 Uploading chunk 82/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,005 main 137109 139624943524736 Uploading chunk 83/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,073 main 137109 139624943524736 Uploading chunk 84/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,135 main 137109 139624943524736 Uploading chunk 85/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,205 main 137109 139624943524736 Uploading chunk 86/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,274 main 137109 139624943524736 Uploading chunk 87/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,343 main 137109 139624943524736 Uploading chunk 88/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,415 main 137109 139624943524736 Uploading chunk 89/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,486 main 137109 139624943524736 Uploading chunk 90/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,556 main 137109 139624943524736 Uploading chunk 91/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,628 main 137109 139624943524736 Uploading chunk 92/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,700 main 137109 139624943524736 Uploading chunk 93/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,770 main 137109 139624943524736 Uploading chunk 94/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,845 main 137109 139624943524736 Uploading chunk 95/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:31,916 main 137109 139624943524736 Uploading chunk 96/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,008 main 137109 139624943524736 Uploading chunk 97/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,077 main 137109 139624943524736 Uploading chunk 98/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,148 main 137109 139624943524736 Uploading chunk 99/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,217 main 137109 139624943524736 Uploading chunk 100/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,288 main 137109 139624943524736 Uploading chunk 101/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,360 main 137109 139624943524736 Uploading chunk 102/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,432 main 137109 139624943524736 Uploading chunk 103/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,503 main 137109 139624943524736 Uploading chunk 104/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,574 main 137109 139624943524736 Uploading chunk 105/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:38:32,609 main 137109 139624943524736 Uploading chunk 106/107 for file DJI_0372_W.zip
+INFO 2025-06-11 10:39:04,236 views 137121 130947358910144 Archive extraction successful for file b887cfab-c32e-4b83-b7ff-189fbafb0d4f: 999 files extracted to project ABC
+INFO 2025-06-13 04:14:25,950 main 327541 131776431500160 Video processing module loaded successfully
+INFO 2025-06-13 04:14:25,993 main 327541 131776431500160 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-13 04:14:25,994 main 327541 131776431500160 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 35% utilization, 14.4% VRAM
+INFO 2025-06-13 09:50:38,518 main 761987 129371409779584 Video processing module loaded successfully
+INFO 2025-06-13 09:50:38,558 main 761987 129371409779584 NVIDIA GPU detected: 1 GPU(s)
+INFO 2025-06-13 09:50:38,558 main 761987 129371409779584 GPU 0: NVIDIA GeForce GTX 1650 with Max-Q Design - 19% utilization, 15.5% VRAM

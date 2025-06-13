@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
 ## Project Overview
 
 This is a full-stack data management system with file upload, storage, and workflow management capabilities. It consists of a Django REST API backend with FastAPI integration for high-performance file operations, and a Next.js frontend.
@@ -11,14 +17,15 @@ This is a full-stack data management system with file upload, storage, and workf
 **Backend (Django + FastAPI):**
 - Django REST framework for user management, authentication (JWT), and API endpoints
 - FastAPI app for high-performance chunked file uploads and video processing
-- MySQL database with custom User model and role-based permissions
+- SQLite database with custom User model and role-based permissions
 - Apps: `users`, `storage`, `file_management`, `media_preview`, `workflow_management`
 - JWT authentication with access/refresh tokens
 - Custom middleware for permissions and access logging
 
 **Frontend (Next.js):**
-- App router with TypeScript and Tailwind CSS
+- Next.js 15 with App router, TypeScript, and Tailwind CSS
 - Zustand for state management
+- Path aliases configured (`@/*` → `./src/*`)
 - Authentication with login/dashboard layout
 - File management, project management, and workflow interfaces
 
@@ -26,8 +33,8 @@ This is a full-stack data management system with file upload, storage, and workf
 
 ### Backend (from /backend directory)
 **Prerequisites:** 
-- Python with Django, FastAPI, PyMySQL, and REST framework packages
-- MySQL server running with database 'nas_db', user 'datamanager', password '123456789'
+- Python with Django, FastAPI, and REST framework packages
+- SQLite database (db.sqlite3) - no additional database setup required
 - No requirements.txt - dependencies managed via Django apps
 
 **Core Development:**
@@ -42,6 +49,7 @@ This is a full-stack data management system with file upload, storage, and workf
 - **Cleanup files:** `python manage.py cleanup_files`
 - **Setup workflow:** `python manage.py setup_workflow`
 - **Create demo workflow:** `python manage.py create_demo_workflow`
+- **Run tests:** `python manage.py test` (Django unit tests)
 
 **Utility scripts:** 
 - `python cleanup_upload.py` - Clean up incomplete uploads
@@ -53,13 +61,15 @@ This is a full-stack data management system with file upload, storage, and workf
 
 ### Frontend (from /frontend directory)
 - **Development server:** `npm run dev` (port 3000)
-- **Build:** `npm run build`
+- **Build:** `npm run build` (ESLint/TypeScript errors ignored in production builds)
 - **Start production:** `npm start`
 - **Lint:** `npm run lint`
+- **Type checking:** `npx tsc --noEmit` (verify TypeScript types)
+- **Package management:** Uses npm (package-lock.json)
 
 ## Key Configuration
 
-- **Database:** MySQL connection in `core/settings.py` - host: 127.0.0.1:3306, db: nas_db, user: datamanager
+- **Database:** SQLite (db.sqlite3) for development - configured in `core/settings.py`
 - **File uploads:** Dynamic chunked uploads (1MB-50MB chunks based on network), max 50GB files
 - **Authentication:** JWT tokens (1-hour access, 7-day refresh) with token blacklisting
 - **CORS:** Configured for localhost:3000 (frontend) and localhost:8000 (backend)
@@ -100,11 +110,11 @@ This is a full-stack data management system with file upload, storage, and workf
 - **Dual server architecture:** Both Django (port 8000) and FastAPI servers must run simultaneously
   - Django: `python manage.py runserver` - handles API/auth/admin
   - FastAPI: `python fastapi_app/main.py` - handles chunked uploads/video processing
-- **Database setup:** MySQL 'nas_db' with user 'datamanager'/password '123456789' must exist
+- **Database setup:** Uses SQLite (db.sqlite3) for development - no additional setup required
 - **Custom middleware:** Three custom middleware classes in users app handle permissions and logging
 - **Logging:** All operations logged to `/backend/logs/upload.log` with structured formatting
 - **No dependency tracking:** Dependencies managed through Django apps, not requirements.txt
-- **Testing:** Limited coverage - test files in `/backend/test/` directory
+- **Testing:** Limited coverage - test files in `/backend/test/` directory, integration tests for file uploads available
 - **Admin access:** Use `python make_superuser.py` to create admin user 'TAT'
 
 ## API Endpoints Structure
@@ -113,3 +123,8 @@ This is a full-stack data management system with file upload, storage, and workf
 - **FastAPI:** High-performance upload endpoints for chunked file operations
 - **Frontend API calls:** TypeScript interfaces defined in `/frontend/src/types/index.ts`
 - **Authentication:** JWT Bearer tokens required for most endpoints
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

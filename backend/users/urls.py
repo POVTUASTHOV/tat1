@@ -5,7 +5,7 @@ from .views import (
     RegisterView, CustomTokenObtainPairView, UserProfileView, 
     ChangePasswordView, LogoutView, UserViewSet, WorkflowRoleViewSet, 
     ProjectAssignmentViewSet, AccessLogViewSet, UserStatsView,
-    UserPermissionsView
+    UserPermissionsView, DebugAuthView
 )
 
 router = DefaultRouter()
@@ -26,6 +26,7 @@ urlpatterns = [
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
     path('permissions/', UserPermissionsView.as_view(), name='user_permissions'),
     path('stats/', UserStatsView.as_view(), name='user_stats'),
+    path('debug-auth/', DebugAuthView.as_view(), name='debug_auth'),
     
     # Router URLs
     path('', include(router.urls)),

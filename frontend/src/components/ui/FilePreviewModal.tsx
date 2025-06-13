@@ -37,7 +37,7 @@ function VideoPlayer({ previewData, fileName, fileSize, onFullscreen }: { previe
   const [showControls, setShowControls] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -459,7 +459,7 @@ function PreviewContent({ data, contentType, fileId, fileName, zoom = 1, rotatio
     
     return (
       <div className="h-full bg-black">
-        <VideoPlayer previewData={data} fileName={fileName} fileSize={fileSize} />
+        <VideoPlayer previewData={data} fileName={fileName} fileSize={fileSize} onFullscreen={() => {}} />
       </div>
     );
   }

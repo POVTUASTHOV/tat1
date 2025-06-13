@@ -172,7 +172,7 @@ class Folder(models.Model):
 class File(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    file = models.FileField(upload_to=user_directory_path)
+    file = models.FileField(upload_to=user_directory_path, max_length=1000)
     size = models.BigIntegerField()
     content_type = models.CharField(max_length=100)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True, related_name='files')

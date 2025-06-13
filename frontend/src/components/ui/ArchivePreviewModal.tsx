@@ -20,12 +20,23 @@ interface ArchiveContent {
   compressed_size: number;
   date_time: any;
   is_dir: boolean;
+  file_type?: string;
+  is_previewable?: boolean;
 }
 
 interface ArchiveData {
   archive_type: string;
   total_files: number;
   contents: ArchiveContent[];
+  preview_mode?: boolean;
+  showing_first?: number;
+  pagination?: {
+    page: number;
+    page_size: number;
+    total_pages: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
 }
 
 export default function ArchivePreviewModal({ 
@@ -40,12 +51,17 @@ export default function ArchivePreviewModal({
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string>('');
   const [projects, setProjects] = useState<any[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
   const [extractOptions, setExtractOptions] = useState({
     targetProjectId: '',
     targetFolderId: '',
-    createSubfolder: true
+    createSubfolder: true,
+    selectedFiles: [] as string[],
+    extractAll: true
   });
   const [showExtractDialog, setShowExtractDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPreviewMode, setIsPreviewMode] = useState(true);
 
   useEffect(() => {
     if (isOpen && fileId) {
@@ -54,24 +70,21 @@ export default function ArchivePreviewModal({
     }
   }, [isOpen, fileId]);
 
-  const loadArchiveContents = async () => {
+  const loadArchiveContents = async (page = 1, preview = true) => {
     setIsLoading(true);
     setError('');
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/media-preview/archive/${fileId}/contents/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: '20',
+        preview: preview.toString()
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to load archive contents');
-      }
-
-      const data = await response.json();
+      
+      const data = await apiService.getArchiveContents(fileId, params.toString());
       setArchiveData(data);
+      setCurrentPage(page);
+      setIsPreviewMode(preview || data.preview_mode);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load archive');
     } finally {
@@ -88,9 +101,19 @@ export default function ArchivePreviewModal({
           ...prev,
           targetProjectId: response.projects[0].id
         }));
+        loadFolders(response.projects[0].id);
       }
     } catch (error) {
       console.error('Failed to load projects:', error);
+    }
+  };
+
+  const loadFolders = async (projectId: string) => {
+    try {
+      const data = await apiService.request<any>(`/storage/projects/${projectId}/folders/`);
+      setFolders(data.results || data);
+    } catch (error) {
+      console.error('Failed to load folders:', error);
     }
   };
 
@@ -104,26 +127,19 @@ export default function ArchivePreviewModal({
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/media-preview/archive/${fileId}/extract/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          target_project_id: extractOptions.targetProjectId,
-          target_folder_id: extractOptions.targetFolderId || undefined,
-          create_subfolder: extractOptions.createSubfolder
-        }),
+      const result = await apiService.extractArchive(fileId, {
+        target_project_id: extractOptions.targetProjectId,
+        target_folder_id: extractOptions.targetFolderId || undefined,
+        create_subfolder: extractOptions.createSubfolder,
+        selected_files: extractOptions.extractAll ? [] : extractOptions.selectedFiles,
+        max_files: extractOptions.extractAll ? 1000 : extractOptions.selectedFiles.length
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Extraction failed');
+      
+      if (result.background_processing) {
+        // Show background processing notification
+        alert(`Archive extraction started in background. Processing ${result.estimated_files} files. Task ID: ${result.task_id}`);
       }
-
-      const result = await response.json();
+      
       setShowExtractDialog(false);
       onExtractComplete();
       onClose();
@@ -161,11 +177,30 @@ export default function ArchivePreviewModal({
                 {archiveData && (
                   <p className="text-sm text-gray-600">
                     {archiveData.archive_type.toUpperCase()} Archive • {archiveData.total_files} items
+                    {archiveData.preview_mode && (
+                      <span className="text-orange-600"> • Preview Mode (showing first {archiveData.showing_first})</span>
+                    )}
                   </p>
                 )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {archiveData && !isPreviewMode && (
+                <Button
+                  variant="outline"
+                  onClick={() => loadArchiveContents(1, true)}
+                >
+                  Preview Mode
+                </Button>
+              )}
+              {archiveData && isPreviewMode && archiveData.total_files > 20 && (
+                <Button
+                  variant="outline"
+                  onClick={() => loadArchiveContents(1, false)}
+                >
+                  View All ({archiveData.total_files})
+                </Button>
+              )}
               {archiveData && (
                 <Button
                   onClick={() => setShowExtractDialog(true)}
@@ -197,7 +232,7 @@ export default function ArchivePreviewModal({
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <p className="text-red-600 mb-4">{error}</p>
-                <Button onClick={loadArchiveContents}>Try Again</Button>
+                <Button onClick={() => loadArchiveContents()}>Try Again</Button>
               </div>
             </div>
           )}
@@ -230,21 +265,43 @@ export default function ArchivePreviewModal({
               </div>
 
               <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-sm font-medium text-gray-900">Contents</h3>
+                  {!isPreviewMode && (
+                    <div className="flex items-center space-x-2">
+                      <label className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={extractOptions.extractAll}
+                          onChange={(e) => setExtractOptions(prev => ({ 
+                            ...prev, 
+                            extractAll: e.target.checked,
+                            selectedFiles: e.target.checked ? [] : prev.selectedFiles
+                          }))}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                        />
+                        Extract All
+                      </label>
+                    </div>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 sticky top-0">
                       <tr>
+                        {!isPreviewMode && !extractOptions.extractAll && (
+                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Select
+                          </th>
+                        )}
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Name
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Size
+                          Type
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Compressed
+                          Size
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Modified
@@ -253,11 +310,35 @@ export default function ArchivePreviewModal({
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {archiveData.contents.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
+                        <tr key={index} className={`hover:bg-gray-50 ${item.is_previewable ? 'bg-blue-50' : ''}`}>
+                          {!isPreviewMode && !extractOptions.extractAll && (
+                            <td className="px-2 py-3">
+                              <input
+                                type="checkbox"
+                                checked={extractOptions.selectedFiles.includes(item.name)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setExtractOptions(prev => ({
+                                      ...prev,
+                                      selectedFiles: [...prev.selectedFiles, item.name]
+                                    }));
+                                  } else {
+                                    setExtractOptions(prev => ({
+                                      ...prev,
+                                      selectedFiles: prev.selectedFiles.filter(f => f !== item.name)
+                                    }));
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </td>
+                          )}
                           <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
                               {item.is_dir ? (
                                 <FolderOpen className="w-4 h-4 text-blue-500" />
+                              ) : item.is_previewable ? (
+                                <File className="w-4 h-4 text-green-500" />
                               ) : (
                                 <File className="w-4 h-4 text-gray-400" />
                               )}
@@ -266,11 +347,11 @@ export default function ArchivePreviewModal({
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {item.is_dir ? '-' : formatFileSize(item.size)}
+                          <td className="px-4 py-3 text-sm text-gray-600 capitalize">
+                            {item.file_type || 'unknown'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {item.is_dir ? '-' : formatFileSize(item.compressed_size)}
+                            {item.is_dir ? '-' : formatFileSize(item.size)}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
                             {formatDateTime(item.date_time)}
@@ -280,6 +361,33 @@ export default function ArchivePreviewModal({
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Pagination Controls */}
+                {archiveData.pagination && (
+                  <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-between items-center">
+                    <div className="text-sm text-gray-700">
+                      Page {archiveData.pagination.page} of {archiveData.pagination.total_pages}
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadArchiveContents(currentPage - 1, false)}
+                        disabled={!archiveData.pagination.has_previous || isLoading}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadArchiveContents(currentPage + 1, false)}
+                        disabled={!archiveData.pagination.has_next || isLoading}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -304,11 +412,16 @@ export default function ArchivePreviewModal({
                 </label>
                 <select
                   value={extractOptions.targetProjectId}
-                  onChange={(e) => setExtractOptions(prev => ({ 
-                    ...prev, 
-                    targetProjectId: e.target.value,
-                    targetFolderId: ''
-                  }))}
+                  onChange={(e) => {
+                    setExtractOptions(prev => ({ 
+                      ...prev, 
+                      targetProjectId: e.target.value,
+                      targetFolderId: ''
+                    }));
+                    if (e.target.value) {
+                      loadFolders(e.target.value);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
@@ -320,6 +433,29 @@ export default function ArchivePreviewModal({
                   ))}
                 </select>
               </div>
+
+              {extractOptions.targetProjectId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Folder (Optional)
+                  </label>
+                  <select
+                    value={extractOptions.targetFolderId}
+                    onChange={(e) => setExtractOptions(prev => ({ 
+                      ...prev, 
+                      targetFolderId: e.target.value 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Root folder</option>
+                    {folders.map(folder => (
+                      <option key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="flex items-center">
@@ -337,6 +473,14 @@ export default function ArchivePreviewModal({
                   </span>
                 </label>
               </div>
+
+              {!extractOptions.extractAll && extractOptions.selectedFiles.length > 0 && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-blue-700 text-sm">
+                    {extractOptions.selectedFiles.length} files selected for extraction
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
@@ -352,7 +496,11 @@ export default function ArchivePreviewModal({
               </Button>
               <Button
                 onClick={handleExtract}
-                disabled={!extractOptions.targetProjectId || isExtracting}
+                disabled={
+                  !extractOptions.targetProjectId || 
+                  isExtracting ||
+                  (!extractOptions.extractAll && extractOptions.selectedFiles.length === 0)
+                }
                 isLoading={isExtracting}
               >
                 {isExtracting ? (

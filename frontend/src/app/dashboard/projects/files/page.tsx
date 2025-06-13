@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Trash2, Grid, List } from 'lucide-react';
-import Button from '../../../components/ui/Button';
-import FileActions from '../../../components/ui/FileActions';
-import FilePreviewModal from '../../../components/ui/FilePreviewModal';
-import ArchivePreviewModal from '../../../components/ui/ArchivePreviewModal';
-import { apiService } from '../../../lib/api';
-import { FileItem } from '../../../types';
-import { formatFileSize, formatDate } from '../../../lib/utils';
+import Button from '../../../../components/ui/Button';
+import FileActions from '../../../../components/ui/FileActions';
+import FilePreviewModal from '../../../../components/ui/FilePreviewModal';
+import ArchivePreviewModal from '../../../../components/ui/ArchivePreviewModal';
+import { apiService } from '../../../../lib/api';
+import { FileItem } from '../../../../types';
+import { formatFileSize, formatDate } from '../../../../lib/utils';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -403,7 +403,10 @@ export default function FilesPage() {
           onExtractComplete={() => {
             setShowArchivePreview(false);
             setSelectedFile(null);
-            loadFiles();
+            // Small delay to ensure database transaction is committed
+            setTimeout(() => {
+              loadFiles();
+            }, 500);
           }}
         />
       )}

@@ -2,8 +2,6 @@ import os
 import stat
 from pathlib import Path
 from datetime import timedelta
-import pymysql
-pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -39,11 +37,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'debug_middleware.DebugAuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'users.middleware.WorkflowPermissionMiddleware',
     'users.middleware.AccessLogMiddleware',
-    'users.middleware.WorkflowAccessMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -68,16 +66,8 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'nas_db',
-        'USER': 'datamanager',
-        'PASSWORD': '123456789',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-            'connect_timeout': 60,
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

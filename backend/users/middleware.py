@@ -104,15 +104,31 @@ class WorkflowAccessMiddleware(MiddlewareMixin):
         if not self.is_workflow_endpoint(request.path):
             return None
         
+        print(f"DEBUG: WorkflowAccessMiddleware processing {request.path}")
+        print(f"DEBUG: User authenticated: {hasattr(request, 'user') and request.user.is_authenticated}")
+        
+        if hasattr(request, 'user'):
+            print(f"DEBUG: User: {request.user}")
+            if request.user.is_authenticated:
+                print(f"DEBUG: User is_superuser: {request.user.is_superuser}")
+                print(f"DEBUG: User workflow_role: {request.user.workflow_role}")
+            else:
+                print("DEBUG: User not authenticated")
+        else:
+            print("DEBUG: No user attribute on request")
+        
         if not hasattr(request, 'user') or not request.user.is_authenticated:
+            print("DEBUG: Returning 401 - Authentication required")
             return JsonResponse({'error': 'Authentication required'}, status=401)
         
         if not request.user.workflow_role and not request.user.is_superuser:
+            print("DEBUG: Returning 403 - Workflow access denied")
             return JsonResponse({
                 'error': 'Workflow access denied',
                 'message': 'You need a workflow role to access this feature'
             }, status=403)
         
+        print("DEBUG: Access granted")
         return None
     
     def is_workflow_endpoint(self, path):

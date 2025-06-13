@@ -1,3 +1,6 @@
-test1@example.com pass En^7rFmcZp5i
-test2@gmail.com pass VKaySY$fmJ7b
-test3@gmail.com pass n0N!00FF&h2^
+  Available Test Accounts:
+  1. Superuser: povtuas@gmail.com / 123456789
+  2. Admin: test1@example.com / En^7rFmcZp5i
+  3. Manager: test2@gmail.com / VKaySY$fmJ7b
+  4. Employee: test3@gmail.com / n0N!00FF&h2^
+  5. Employee: test4@gmail.com / sAgC4KWcFIa6

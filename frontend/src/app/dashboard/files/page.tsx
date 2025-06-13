@@ -1,37 +1,198 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Download, Trash2, Grid, List } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Download, Trash2, Grid, List, Filter, RefreshCw } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import { apiService } from '../../../lib/api';
 import { FileItem } from '../../../types';
 import { formatFileSize, formatDate } from '../../../lib/utils';
+import { useDebounce } from '../../../hooks/useDebounce';
+
+interface FileCache {
+  [key: string]: FileItem[];
+}
+
+interface LoadingState {
+  initial: boolean;
+  loadingMore: boolean;
+  refreshing: boolean;
+}
 
 export default function FilesPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState<LoadingState>({
+    initial: true,
+    loadingMore: false,
+    refreshing: false
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalFiles, setTotalFiles] = useState(0);
+  const [hasMoreFiles, setHasMoreFiles] = useState(true);
+  const [fileTypeFilter, setFileTypeFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'name' | 'size' | 'date'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [useInfiniteScroll, setUseInfiniteScroll] = useState(true);
+  
+  // Caching and optimization
+  const [fileCache, setFileCache] = useState<FileCache>({});
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<HTMLDivElement>(null);
+  
+  // Configuration
+  const INITIAL_PAGE_SIZE = 40; // Load 40 files initially
+  const LOAD_MORE_SIZE = 40;    // Load 40 more files per batch
+  const TRADITIONAL_PAGE_SIZE = 20; // For traditional pagination
+  
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const pageSize = 20;
-
+  // Effect for initial load and search changes
   useEffect(() => {
-    loadFiles();
-  }, [currentPage, searchTerm]);
+    loadInitialFiles();
+  }, [debouncedSearchTerm, fileTypeFilter, sortBy, sortOrder]);
+
+  // Effect for traditional pagination
+  useEffect(() => {
+    if (!useInfiniteScroll) {
+      loadFiles();
+    }
+  }, [currentPage]);
+
+  // Effect for infinite scroll observer
+  useEffect(() => {
+    if (!useInfiniteScroll || !observerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreFiles && !loadingState.loadingMore) {
+          loadMoreFiles();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+
+    observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [hasMoreFiles, loadingState.loadingMore, useInfiniteScroll]);
+
+  // Save scroll position when component unmounts
+  useEffect(() => {
+    return () => {
+      if (scrollContainerRef.current) {
+        setScrollPosition(scrollContainerRef.current.scrollTop);
+      }
+    };
+  }, []);
+
+  const buildCacheKey = (search: string, filter: string, sort: string, order: string) => {
+    return `${search}-${filter}-${sort}-${order}`;
+  };
+
+  const loadInitialFiles = async () => {
+    const cacheKey = buildCacheKey(debouncedSearchTerm, fileTypeFilter, sortBy, sortOrder);
+    
+    // Check cache first
+    if (fileCache[cacheKey] && !debouncedSearchTerm) {
+      setFiles(fileCache[cacheKey]);
+      setLoadingState({ initial: false, loadingMore: false, refreshing: false });
+      return;
+    }
+
+    try {
+      setLoadingState({ initial: true, loadingMore: false, refreshing: false });
+      setCurrentPage(1);
+      
+      if (!apiService.isAuthenticated()) {
+        console.error('No authentication token found');
+        window.location.href = '/login';
+        return;
+      }
+      
+      const pageSize = useInfiniteScroll ? INITIAL_PAGE_SIZE : TRADITIONAL_PAGE_SIZE;
+      const response = await apiService.getAllFiles(1, pageSize, debouncedSearchTerm);
+      
+      setFiles(response.files);
+      setTotalFiles(response.total);
+      setHasMoreFiles(response.files.length < response.total);
+      
+      // Cache the results for non-search queries
+      if (!debouncedSearchTerm) {
+        setFileCache(prev => ({ ...prev, [cacheKey]: response.files }));
+      }
+      
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setLoadingState({ initial: false, loadingMore: false, refreshing: false });
+    }
+  };
+
+  const loadMoreFiles = async () => {
+    if (!hasMoreFiles || loadingState.loadingMore) return;
+
+    try {
+      setLoadingState({ initial: false, loadingMore: true, refreshing: false });
+      
+      const nextPage = Math.floor(files.length / LOAD_MORE_SIZE) + 1;
+      const response = await apiService.getAllFiles(nextPage, LOAD_MORE_SIZE, debouncedSearchTerm);
+      
+      setFiles(prev => [...prev, ...response.files]);
+      setHasMoreFiles(files.length + response.files.length < response.total);
+      
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setLoadingState({ initial: false, loadingMore: false, refreshing: false });
+    }
+  };
 
   const loadFiles = async () => {
     try {
-      setIsLoading(true);
-      const response = await apiService.getAllFiles(currentPage, pageSize, searchTerm);
+      setLoadingState({ initial: true, loadingMore: false, refreshing: false });
+      
+      if (!apiService.isAuthenticated()) {
+        console.error('No authentication token found');
+        window.location.href = '/login';
+        return;
+      }
+      
+      const response = await apiService.getAllFiles(currentPage, TRADITIONAL_PAGE_SIZE, debouncedSearchTerm);
       setFiles(response.files);
       setTotalFiles(response.total);
+      
     } catch (error) {
-      console.error('Failed to load files:', error);
+      handleApiError(error);
     } finally {
-      setIsLoading(false);
+      setLoadingState({ initial: false, loadingMore: false, refreshing: false });
+    }
+  };
+
+  const handleApiError = (error: unknown) => {
+    console.error('Failed to load files:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Network Error')) {
+        alert('Backend server is not running. Please start the Django backend server on port 8000.');
+      } else if (error.message.includes('401') || error.message.includes('Authentication')) {
+        console.error('Authentication failed, redirecting to login');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+  };
+
+  const refreshFiles = async () => {
+    try {
+      setLoadingState({ initial: false, loadingMore: false, refreshing: true });
+      setFileCache({}); // Clear cache
+      await loadInitialFiles();
+    } finally {
+      setLoadingState({ initial: false, loadingMore: false, refreshing: false });
     }
   };
 
@@ -81,15 +242,8 @@ export default function FilesPage() {
     }
   };
 
-  const totalPages = Math.ceil(totalFiles / pageSize);
-
-  if (isLoading && currentPage === 1) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const totalPages = Math.ceil(totalFiles / TRADITIONAL_PAGE_SIZE);
+  const isLoading = loadingState.initial;
 
   return (
     <div className="space-y-6">
@@ -119,48 +273,123 @@ export default function FilesPage() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search files..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              {selectedFiles.length > 0 && (
+          <div className="space-y-4">
+            {/* Search and Actions Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search files..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
+                  />
+                </div>
+                
+                {selectedFiles.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete ({selectedFiles.length})
+                  </Button>
+                )}
+                
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleDeleteSelected}
+                  onClick={refreshFiles}
+                  disabled={loadingState.refreshing}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete ({selectedFiles.length})
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loadingState.refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
                 </Button>
-              )}
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-500">
+                  {useInfiniteScroll 
+                    ? `${files.length} of ${totalFiles} files loaded`
+                    : `${totalFiles} files total`
+                  }
+                </span>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.length === files.length && files.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Select All</span>
+                </label>
+              </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {totalFiles} files total
-              </span>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedFiles.length === files.length && files.length > 0}
-                  onChange={handleSelectAll}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">Select All</span>
-              </label>
+            {/* Filters and Controls Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Filter className="w-4 h-4 text-gray-500" />
+                  <select
+                    value={fileTypeFilter}
+                    onChange={(e) => setFileTypeFilter(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Types</option>
+                    <option value="image">Images</option>
+                    <option value="video">Videos</option>
+                    <option value="document">Documents</option>
+                    <option value="archive">Archives</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'name' | 'size' | 'date')}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="date">Date</option>
+                    <option value="name">Name</option>
+                    <option value="size">Size</option>
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">View:</span>
+                <Button
+                  variant={useInfiniteScroll ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setUseInfiniteScroll(true)}
+                >
+                  Infinite Scroll
+                </Button>
+                <Button
+                  variant={!useInfiniteScroll ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setUseInfiniteScroll(false)}
+                >
+                  Pagination
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
+        <div ref={scrollContainerRef} className={useInfiniteScroll ? 'max-h-[70vh] overflow-y-auto' : ''}>
         {viewMode === 'list' ? (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -277,18 +506,42 @@ export default function FilesPage() {
           </div>
         )}
 
+        {/* Loading more indicator for infinite scroll */}
+        {useInfiniteScroll && loadingState.loadingMore && (
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-sm text-gray-500">Loading more files...</span>
+          </div>
+        )}
+        
+        {/* Intersection observer target for infinite scroll */}
+        {useInfiniteScroll && hasMoreFiles && !loadingState.loadingMore && (
+          <div ref={observerRef} className="h-4" />
+        )}
+        </div>
+
         {files.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <div className="text-gray-500">
               {searchTerm ? 'No files found matching your search' : 'No files found'}
             </div>
+            {!searchTerm && (
+              <Button 
+                variant="primary" 
+                className="mt-4"
+                onClick={() => window.location.href = '/dashboard/projects'}
+              >
+                Upload Files
+              </Button>
+            )}
           </div>
         )}
 
-        {totalPages > 1 && (
+        {/* Traditional pagination - only show when not using infinite scroll */}
+        {!useInfiniteScroll && totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalFiles)} of {totalFiles} files
+              Showing {((currentPage - 1) * TRADITIONAL_PAGE_SIZE) + 1} to {Math.min(currentPage * TRADITIONAL_PAGE_SIZE, totalFiles)} of {totalFiles} files
             </div>
             <div className="flex space-x-2">
               <Button
@@ -310,6 +563,18 @@ export default function FilesPage() {
               >
                 Next
               </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Infinite scroll summary */}
+        {useInfiniteScroll && files.length > 0 && (
+          <div className="px-6 py-4 border-t border-gray-200 text-center">
+            <div className="text-sm text-gray-500">
+              {files.length === totalFiles 
+                ? `All ${totalFiles} files loaded`
+                : `${files.length} of ${totalFiles} files loaded${hasMoreFiles ? ' - scroll for more' : ''}`
+              }
             </div>
           </div>
         )}

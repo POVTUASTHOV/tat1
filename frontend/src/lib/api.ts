@@ -23,6 +23,10 @@ class ApiService {
     }
   }
 
+  isAuthenticated(): boolean {
+    return !!(this.token || (typeof window !== 'undefined' && localStorage.getItem('token')));
+  }
+
   clearTokens() {
     this.token = null;
     this.refreshToken = null;
@@ -68,7 +72,7 @@ class ApiService {
     }
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const makeRequest = async (accessToken: string | null) => {
       const config: RequestInit = {
         headers: {
@@ -79,10 +83,24 @@ class ApiService {
         ...options,
       };
 
-      return fetch(`${API_BASE_URL}${endpoint}`, config);
+      try {
+        return await fetch(`${API_BASE_URL}${endpoint}`, config);
+      } catch (error) {
+        // Handle network errors (server not running, no internet, etc.)
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+          throw new Error(`Network Error: Cannot connect to backend server at ${API_BASE_URL}. Please ensure the Django backend is running on port 8000.`);
+        }
+        throw error;
+      }
     };
 
-    let response = await makeRequest(this.token);
+    let response;
+    try {
+      response = await makeRequest(this.token);
+    } catch (error) {
+      // Re-throw network errors with better context
+      throw error;
+    }
 
     if (response.status === 401 && this.refreshToken && !this.isRefreshing) {
       try {
@@ -150,12 +168,38 @@ class ApiService {
     return this.request<{ projects: Project[] }>(API_ENDPOINTS.PROJECTS_LIST);
   }
 
-  async getProjectFiles(projectId: string, folderId?: string): Promise<{ files: FileItem[] }> {
+  async getProjectFiles(projectId: string, options?: {
+    folderId?: string;
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }): Promise<{ 
+    files: FileItem[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> {
     let url = `${API_ENDPOINTS.LIST_FILES}?project_id=${projectId}`;
-    if (folderId) {
-      url += `&folder_id=${folderId}`;
+    if (options?.folderId) {
+      url += `&folder_id=${options.folderId}`;
     }
-    return this.request<{ files: FileItem[] }>(url);
+    if (options?.page) {
+      url += `&page=${options.page}`;
+    }
+    if (options?.pageSize) {
+      url += `&page_size=${options.pageSize}`;
+    }
+    if (options?.search) {
+      url += `&search=${encodeURIComponent(options.search)}`;
+    }
+    return this.request<{ 
+      files: FileItem[];
+      total: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+    }>(url);
   }
 
   async getFolderFiles(folderId: string): Promise<{ files: FileItem[] }> {
@@ -299,14 +343,17 @@ class ApiService {
     return this.request<any>(`/media-preview/preview/${fileId}/preview/`);
   }
 
-  async getArchiveContents(fileId: string): Promise<any> {
-    return this.request<any>(`/media-preview/archive/${fileId}/contents/`);
+  async getArchiveContents(fileId: string, params?: string): Promise<any> {
+    const url = params ? `/media-preview/archive/${fileId}/contents/?${params}` : `/media-preview/archive/${fileId}/contents/`;
+    return this.request<any>(url);
   }
 
   async extractArchive(fileId: string, data: {
     target_project_id: string;
     target_folder_id?: string;
     create_subfolder: boolean;
+    selected_files?: string[];
+    max_files?: number;
   }): Promise<any> {
     return this.request<any>(`/media-preview/archive/${fileId}/extract/`, {
       method: 'POST',

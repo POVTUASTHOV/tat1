@@ -416,6 +416,14 @@ class UserPermissionsView(generics.GenericAPIView):
     def get(self, request):
         user = request.user
         
+        print(f"DEBUG UserPermissionsView: User type: {type(user)}")
+        print(f"DEBUG UserPermissionsView: User: {user}")
+        print(f"DEBUG UserPermissionsView: Is authenticated: {user.is_authenticated}")
+        print(f"DEBUG UserPermissionsView: Is superuser: {user.is_superuser}")
+        print(f"DEBUG UserPermissionsView: Has workflow_role attr: {hasattr(user, 'workflow_role')}")
+        if hasattr(user, 'workflow_role'):
+            print(f"DEBUG UserPermissionsView: Workflow role: {user.workflow_role}")
+        
         permissions = {
             'user_id': str(user.id),
             'username': user.username,
@@ -426,7 +434,7 @@ class UserPermissionsView(generics.GenericAPIView):
             'is_admin': user.is_admin_role(),
             'is_manager': user.is_manager_role(),
             'is_employee': user.is_employee_role(),
-            'can_access_workflow': user.workflow_role is not None,
+            'can_access_workflow': user.workflow_role is not None or user.is_superuser,
             'can_create_admin': user.is_superuser,
             'can_create_manager': user.is_admin_role(),
             'can_create_employee': user.is_manager_role(),
@@ -445,3 +453,24 @@ class UserPermissionsView(generics.GenericAPIView):
             ]
         
         return Response(permissions)
+
+class DebugAuthView(generics.GenericAPIView):
+    permission_classes = []  # No permission restrictions
+    authentication_classes = []  # Use global authentication
+    
+    def get(self, request):
+        print(f"DEBUG DebugAuthView: Request user: {request.user}")
+        print(f"DEBUG DebugAuthView: User type: {type(request.user)}")
+        print(f"DEBUG DebugAuthView: Is authenticated: {request.user.is_authenticated}")
+        print(f"DEBUG DebugAuthView: Authorization header: {request.META.get('HTTP_AUTHORIZATION', 'NOT PRESENT')}")
+        
+        return Response({
+            'user': str(request.user),
+            'authenticated': request.user.is_authenticated,
+            'is_superuser': getattr(request.user, 'is_superuser', False),
+            'has_workflow_role': hasattr(request.user, 'workflow_role'),
+            'workflow_role': str(getattr(request.user, 'workflow_role', None)),
+            'headers': {
+                'authorization': request.META.get('HTTP_AUTHORIZATION', 'NOT PRESENT')
+            }
+        })

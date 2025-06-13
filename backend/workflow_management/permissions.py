@@ -6,17 +6,23 @@ from storage.models import Project
 class IsManagerOrAdmin(permissions.BasePermission):
     
     def has_permission(self, request, view):
+        print(f"DEBUG IsManagerOrAdmin: User: {request.user}")
+        print(f"DEBUG IsManagerOrAdmin: Authenticated: {request.user.is_authenticated}")
+        
         if not request.user.is_authenticated:
+            print("DEBUG IsManagerOrAdmin: Not authenticated - returning False")
             return False
+            
+        print(f"DEBUG IsManagerOrAdmin: Is superuser: {request.user.is_superuser}")
+        print(f"DEBUG IsManagerOrAdmin: Workflow role: {getattr(request.user, 'workflow_role', None)}")
         
         if request.user.is_superuser:
+            print("DEBUG IsManagerOrAdmin: Is superuser - returning True")
             return True
         
-        return ProjectAssignment.objects.filter(
-            user=request.user,
-            role__name__in=[WorkflowRole.ADMIN, WorkflowRole.MANAGER],
-            is_active=True
-        ).exists()
+        has_role = hasattr(request.user, 'workflow_role') and request.user.workflow_role and request.user.workflow_role.name in [WorkflowRole.ADMIN, WorkflowRole.MANAGER]
+        print(f"DEBUG IsManagerOrAdmin: Has required role: {has_role}")
+        return has_role
 
 class IsAdminOnly(permissions.BasePermission):
     
@@ -27,25 +33,28 @@ class IsAdminOnly(permissions.BasePermission):
         if request.user.is_superuser:
             return True
         
-        return ProjectAssignment.objects.filter(
-            user=request.user,
-            role__name=WorkflowRole.ADMIN,
-            is_active=True
-        ).exists()
+        return request.user.workflow_role and request.user.workflow_role.name == WorkflowRole.ADMIN
 
 class IsEmployeeOrAbove(permissions.BasePermission):
     
     def has_permission(self, request, view):
+        print(f"DEBUG IsEmployeeOrAbove: User: {request.user}")
+        print(f"DEBUG IsEmployeeOrAbove: Authenticated: {request.user.is_authenticated}")
+        
         if not request.user.is_authenticated:
+            print("DEBUG IsEmployeeOrAbove: Not authenticated - returning False")
             return False
+            
+        print(f"DEBUG IsEmployeeOrAbove: Is superuser: {request.user.is_superuser}")
+        print(f"DEBUG IsEmployeeOrAbove: Workflow role: {getattr(request.user, 'workflow_role', None)}")
         
         if request.user.is_superuser:
+            print("DEBUG IsEmployeeOrAbove: Is superuser - returning True")
             return True
         
-        return ProjectAssignment.objects.filter(
-            user=request.user,
-            is_active=True
-        ).exists()
+        has_role = hasattr(request.user, 'workflow_role') and request.user.workflow_role is not None
+        print(f"DEBUG IsEmployeeOrAbove: Has workflow role: {has_role}")
+        return has_role
 
 class CanAccessAssignment(permissions.BasePermission):
     
@@ -59,11 +68,7 @@ class CanAccessAssignment(permissions.BasePermission):
         if hasattr(obj, 'user') and obj.user == request.user:
             return True
         
-        return ProjectAssignment.objects.filter(
-            user=request.user,
-            role__name__in=[WorkflowRole.ADMIN, WorkflowRole.MANAGER],
-            is_active=True
-        ).exists()
+        return request.user.workflow_role and request.user.workflow_role.name in [WorkflowRole.ADMIN, WorkflowRole.MANAGER]
 
 class ProjectAccessPermission(permissions.BasePermission):
     
@@ -98,8 +103,4 @@ class ProjectAccessPermission(permissions.BasePermission):
             user=request.user,
             project=project,
             is_active=True
-        ).exists() or ProjectAssignment.objects.filter(
-            user=request.user,
-            role__name__in=[WorkflowRole.ADMIN, WorkflowRole.MANAGER],
-            is_active=True
-        ).exists()
+        ).exists() or (request.user.workflow_role and request.user.workflow_role.name in [WorkflowRole.ADMIN, WorkflowRole.MANAGER])
