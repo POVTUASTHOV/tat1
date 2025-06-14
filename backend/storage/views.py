@@ -44,16 +44,31 @@ class ProjectViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def files(self, request, pk=None):
+        from django.core.paginator import Paginator
+        
         project = self.get_object()
         folder_id = request.query_params.get('folder_id')
+        page = int(request.query_params.get('page', 1))
+        page_size = min(int(request.query_params.get('page_size', 40)), 100)  # Cap at 100, default 40
         
         if folder_id:
             files = project.files.filter(folder_id=folder_id)
         else:
             files = project.files.filter(folder=None)
-            
-        serializer = FileSerializer(files, many=True)
-        return Response(serializer.data)
+        
+        files = files.order_by('-uploaded_at')
+        
+        paginator = Paginator(files, page_size)
+        page_obj = paginator.get_page(page)
+        
+        serializer = FileSerializer(page_obj, many=True)
+        return Response({
+            'files': serializer.data,
+            'total': paginator.count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': paginator.num_pages
+        })
     
     @action(detail=True, methods=['post'])
     def create_folder(self, request, pk=None):
@@ -102,13 +117,28 @@ class FolderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def contents(self, request, pk=None):
+        from django.core.paginator import Paginator
+        
         folder = self.get_object()
-        folders = Folder.objects.filter(parent=folder)
-        files = File.objects.filter(folder=folder)
+        page = int(request.query_params.get('page', 1))
+        page_size = min(int(request.query_params.get('page_size', 40)), 100)  # Cap at 100, default 40
+        
+        folders = Folder.objects.filter(parent=folder).order_by('name')
+        files = File.objects.filter(folder=folder).order_by('-uploaded_at')
+        
+        # Paginate files (folders are usually fewer, so we don't paginate them)
+        paginator = Paginator(files, page_size)
+        page_obj = paginator.get_page(page)
         
         return Response({
             'folders': FolderSerializer(folders, many=True).data,
-            'files': FileSerializer(files, many=True).data
+            'files': FileSerializer(page_obj, many=True).data,
+            'pagination': {
+                'total': paginator.count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': paginator.num_pages
+            }
         })
     
     @action(detail=True, methods=['get'])

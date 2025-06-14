@@ -28,7 +28,7 @@ class FileManagementViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def list_files(self, request):
         page = int(request.GET.get('page', 1))
-        page_size = min(int(request.GET.get('page_size', 20)), 100)  # Cap at 100 for performance
+        page_size = min(int(request.GET.get('page_size', 40)), 100)  # Cap at 100 for performance
         search = request.GET.get('search', '')
         folder_id = request.GET.get('folder_id')
         project_id = request.GET.get('project_id')
@@ -88,7 +88,7 @@ class FileManagementViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def all_files(self, request):
         page = int(request.GET.get('page', 1))
-        page_size = int(request.GET.get('page_size', 20))
+        page_size = int(request.GET.get('page_size', 40))
         search = request.GET.get('search', '')
         
         queryset = self.get_queryset()

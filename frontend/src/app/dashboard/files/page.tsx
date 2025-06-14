@@ -5,7 +5,7 @@ import { Search, Download, Trash2, Grid, List, Filter, RefreshCw } from 'lucide-
 import Button from '../../../components/ui/Button';
 import { apiService } from '../../../lib/api';
 import { FileItem } from '../../../types';
-import { formatFileSize, formatDate } from '../../../lib/utils';
+import { formatFileSize, formatDate, createFilePairs, FilePair } from '../../../lib/utils';
 import { useDebounce } from '../../../hooks/useDebounce';
 
 interface FileCache {
@@ -20,6 +20,7 @@ interface LoadingState {
 
 export default function FilesPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [filePairs, setFilePairs] = useState<FilePair[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -34,7 +35,7 @@ export default function FilesPage() {
   const [fileTypeFilter, setFileTypeFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<'name' | 'size' | 'date'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [useInfiniteScroll, setUseInfiniteScroll] = useState(true);
+  const [useInfiniteScroll, setUseInfiniteScroll] = useState(false);
   
   // Caching and optimization
   const [fileCache, setFileCache] = useState<FileCache>({});
@@ -48,6 +49,12 @@ export default function FilesPage() {
   const TRADITIONAL_PAGE_SIZE = 20; // For traditional pagination
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Effect to create file pairs when files change
+  useEffect(() => {
+    const pairs = createFilePairs(files);
+    setFilePairs(pairs);
+  }, [files]);
 
   // Effect for initial load and search changes
   useEffect(() => {
@@ -196,19 +203,25 @@ export default function FilesPage() {
     }
   };
 
-  const handleSelectFile = (fileId: string) => {
-    setSelectedFiles(prev =>
-      prev.includes(fileId)
-        ? prev.filter(id => id !== fileId)
-        : [...prev, fileId]
-    );
+  const handleSelectPair = (pair: FilePair) => {
+    const pairFileIds = pair.files.map(f => f.id);
+    const allSelected = pairFileIds.every(id => selectedFiles.includes(id));
+    
+    if (allSelected) {
+      // Deselect all files in the pair
+      setSelectedFiles(prev => prev.filter(id => !pairFileIds.includes(id)));
+    } else {
+      // Select all files in the pair
+      setSelectedFiles(prev => [...prev.filter(id => !pairFileIds.includes(id)), ...pairFileIds]);
+    }
   };
 
   const handleSelectAll = () => {
+    const allFileIds = files.map(file => file.id);
     setSelectedFiles(
       selectedFiles.length === files.length
         ? []
-        : files.map(file => file.id)
+        : allFileIds
     );
   };
 
@@ -313,8 +326,8 @@ export default function FilesPage() {
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-500">
                   {useInfiniteScroll 
-                    ? `${files.length} of ${totalFiles} files loaded`
-                    : `${totalFiles} files total`
+                    ? `${filePairs.length} items (${files.length} of ${totalFiles} files loaded)`
+                    : `${filePairs.length} items (${totalFiles} files total)`
                   }
                 </span>
                 <label className="flex items-center">
@@ -424,84 +437,128 @@ export default function FilesPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {files.map((file) => (
-                  <tr key={file.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.includes(file.id)}
-                        onChange={() => handleSelectFile(file.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{file.name}</div>
-                      <div className="text-sm text-gray-500">{file.file_path}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {file.project_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {file.size_formatted}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {file.content_type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(file.uploaded_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadFile(file.id, file.name)}
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {filePairs.map((pair) => {
+                  const isPairSelected = pair.files.every(f => selectedFiles.includes(f.id));
+                  return (
+                    <tr key={pair.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={isPairSelected}
+                          onChange={() => handleSelectPair(pair)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {pair.displayName}
+                          {pair.type === 'paired' && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              Paired
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">{pair.primaryFile.file_path}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {pair.primaryFile.project_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {pair.type === 'paired' 
+                          ? `${pair.primaryFile.size_formatted} + ${pair.pairFile?.size_formatted || '0 Bytes'}`
+                          : pair.primaryFile.size_formatted
+                        }
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {pair.type === 'paired'
+                          ? `${pair.primaryFile.content_type} + ${pair.pairFile?.content_type || ''}`
+                          : pair.primaryFile.content_type
+                        }
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(pair.primaryFile.uploaded_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-1">
+                          {pair.files.map((file) => (
+                            <Button
+                              key={`download-${file.id}`}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadFile(file.id, file.name)}
+                              title={`Download ${file.name}`}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
           <div className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                    selectedFiles.includes(file.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleSelectFile(file.id)}
-                >
-                  <div className="text-center">
-                    <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <span className="text-xs font-medium text-gray-600">
-                        {file.name.split('.').pop()?.toUpperCase() || 'FILE'}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-medium text-gray-900 truncate" title={file.name}>
-                      {file.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1">{file.size_formatted}</p>
-                    <p className="text-xs text-gray-400 mt-1">{file.project_name}</p>
-                    
-                    <div className="flex justify-center mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadFile(file.id, file.name);
-                        }}
-                      >
-                        <Download className="w-3 h-3" />
-                      </Button>
+              {filePairs.map((pair) => {
+                const isPairSelected = pair.files.every(f => selectedFiles.includes(f.id));
+                return (
+                  <div
+                    key={pair.id}
+                    className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                      isPairSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                    }`}
+                    onClick={() => handleSelectPair(pair)}
+                  >
+                    <div className="text-center">
+                      <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 relative">
+                        <span className="text-xs font-medium text-gray-600">
+                          {pair.primaryFile.name.split('.').pop()?.toUpperCase() || 'FILE'}
+                        </span>
+                        {pair.type === 'paired' && (
+                          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                            2
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-medium text-gray-900 truncate" title={pair.displayName}>
+                        {pair.displayName}
+                      </h3>
+                      {pair.type === 'paired' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                          Paired
+                        </span>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {pair.type === 'paired' 
+                          ? `${pair.primaryFile.size_formatted} + ${pair.pairFile?.size_formatted || '0 Bytes'}`
+                          : pair.primaryFile.size_formatted
+                        }
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">{pair.primaryFile.project_name}</p>
+                      
+                      <div className="flex justify-center mt-3 space-x-1">
+                        {pair.files.map((file) => (
+                          <Button
+                            key={`grid-download-${file.id}`}
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadFile(file.id, file.name);
+                            }}
+                            title={`Download ${file.name}`}
+                          >
+                            <Download className="w-3 h-3" />
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

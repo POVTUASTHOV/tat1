@@ -176,12 +176,12 @@ export default function ProjectDetailPage() {
   const [processingStatuses, setProcessingStatuses] = useState<Record<string, VideoProcessingStatus>>({});
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    pageSize: 20, // Reduced from 50 to 20 for better performance
+    pageSize: 40, // Set to 40 for better performance with large folders
     totalPages: 1,
     total: 0,
     hasMorePages: false
   });
-  const [viewMode, setViewMode] = useState<'paginated' | 'infinite'>('infinite');
+  const [viewMode, setViewMode] = useState<'paginated' | 'infinite'>('paginated');
   const [sortBy, setSortBy] = useState<'name' | 'size' | 'date' | 'type'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterType, setFilterType] = useState<string>('all');
@@ -404,7 +404,7 @@ export default function ProjectDetailPage() {
           loadMoreFiles();
         }
       },
-      { threshold: 0.1 }
+      { rootMargin: '200px' }
     );
 
     const currentRef = loadMoreRef.current;

@@ -8,10 +8,11 @@ import FilePreviewModal from '../../../../components/ui/FilePreviewModal';
 import ArchivePreviewModal from '../../../../components/ui/ArchivePreviewModal';
 import { apiService } from '../../../../lib/api';
 import { FileItem } from '../../../../types';
-import { formatFileSize, formatDate } from '../../../../lib/utils';
+import { formatFileSize, formatDate, createFilePairs, FilePair } from '../../../../lib/utils';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [filePairs, setFilePairs] = useState<FilePair[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -22,11 +23,16 @@ export default function FilesPage() {
   const [showArchivePreview, setShowArchivePreview] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
-  const pageSize = 20;
+  const pageSize = 40;
 
   useEffect(() => {
     loadFiles();
   }, [currentPage, searchTerm]);
+
+  useEffect(() => {
+    const pairs = createFilePairs(files);
+    setFilePairs(pairs);
+  }, [files]);
 
   const loadFiles = async () => {
     try {
@@ -41,22 +47,25 @@ export default function FilesPage() {
     }
   };
 
-  const handleSelectFile = (fileId: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleSelectPair = (pair: FilePair) => {
+    const pairFileIds = pair.files.map(f => f.id);
+    const allSelected = pairFileIds.every(id => selectedFiles.includes(id));
     
-    setSelectedFiles(prev =>
-      prev.includes(fileId)
-        ? prev.filter(id => id !== fileId)
-        : [...prev, fileId]
-    );
+    if (allSelected) {
+      // Deselect all files in the pair
+      setSelectedFiles(prev => prev.filter(id => !pairFileIds.includes(id)));
+    } else {
+      // Select all files in the pair
+      setSelectedFiles(prev => [...prev.filter(id => !pairFileIds.includes(id)), ...pairFileIds]);
+    }
   };
 
   const handleSelectAll = () => {
+    const allFileIds = files.map(file => file.id);
     setSelectedFiles(
       selectedFiles.length === files.length
         ? []
-        : files.map(file => file.id)
+        : allFileIds
     );
   };
 
@@ -183,7 +192,7 @@ export default function FilesPage() {
             
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">
-                {totalFiles} files total
+                {filePairs.length} items ({totalFiles} files total)
               </span>
               <label className="flex items-center">
                 <input
@@ -232,110 +241,152 @@ export default function FilesPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {files.map((file) => (
-                  <tr 
-                    key={file.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={(e) => handleSelectFile(file.id, e)}
-                    onDoubleClick={(e) => handleDoubleClick(file, e)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.includes(file.id)}
-                        onChange={() => {}}
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{file.name}</div>
-                      <div className="text-sm text-gray-500">{file.file_path}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {file.project_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {file.size_formatted}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {file.content_type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(file.uploaded_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <FileActions
-                          fileId={file.id}
-                          fileName={file.name}
-                          contentType={file.content_type}
-                          onDownload={() => handleDownloadFile(file.id, file.name)}
-                          onDelete={async () => {
-                            if (confirm(`Delete ${file.name}?`)) {
-                              try {
-                                await apiService.deleteFile(file.id);
-                                await loadFiles();
-                              } catch (error) {
-                                console.error('Failed to delete file:', error);
-                              }
-                            }
-                          }}
-                          onPreviewComplete={loadFiles}
+                {filePairs.map((pair) => {
+                  const isPairSelected = pair.files.every(f => selectedFiles.includes(f.id));
+                  return (
+                    <tr 
+                      key={pair.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleSelectPair(pair)}
+                      onDoubleClick={(e) => handleDoubleClick(pair.primaryFile, e)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={isPairSelected}
+                          onChange={() => {}}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {pair.displayName}
+                          {pair.type === 'paired' && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              Paired
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">{pair.primaryFile.file_path}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {pair.primaryFile.project_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {pair.type === 'paired' 
+                          ? `${pair.primaryFile.size_formatted} + ${pair.pairFile?.size_formatted || '0 Bytes'}`
+                          : pair.primaryFile.size_formatted
+                        }
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {pair.type === 'paired'
+                          ? `${pair.primaryFile.content_type} + ${pair.pairFile?.content_type || ''}`
+                          : pair.primaryFile.content_type
+                        }
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(pair.primaryFile.uploaded_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <div className="flex space-x-1">
+                            {pair.files.map((file) => (
+                              <FileActions
+                                key={file.id}
+                                fileId={file.id}
+                                fileName={file.name}
+                                contentType={file.content_type}
+                                onDownload={() => handleDownloadFile(file.id, file.name)}
+                                onDelete={async () => {
+                                  if (confirm(`Delete ${file.name}?`)) {
+                                    try {
+                                      await apiService.deleteFile(file.id);
+                                      await loadFiles();
+                                    } catch (error) {
+                                      console.error('Failed to delete file:', error);
+                                    }
+                                  }
+                                }}
+                                onPreviewComplete={loadFiles}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
           <div className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                    selectedFiles.includes(file.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                  }`}
-                  onClick={(e) => handleSelectFile(file.id, e)}
-                  onDoubleClick={(e) => handleDoubleClick(file, e)}
-                >
-                  <div className="text-center">
-                    <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <span className="text-xs font-medium text-gray-600">
-                        {file.name.split('.').pop()?.toUpperCase() || 'FILE'}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-medium text-gray-900 truncate" title={file.name}>
-                      {file.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1">{file.size_formatted}</p>
-                    <p className="text-xs text-gray-400 mt-1">{file.project_name}</p>
-                    
-                    <div className="flex justify-center mt-3" onClick={(e) => e.stopPropagation()}>
-                      <FileActions
-                        fileId={file.id}
-                        fileName={file.name}
-                        contentType={file.content_type}
-                        onDownload={() => handleDownloadFile(file.id, file.name)}
-                        onDelete={async () => {
-                          if (confirm(`Delete ${file.name}?`)) {
-                            try {
-                              await apiService.deleteFile(file.id);
-                              await loadFiles();
-                            } catch (error) {
-                              console.error('Failed to delete file:', error);
-                            }
-                          }
-                        }}
-                        onPreviewComplete={loadFiles}
-                      />
+              {filePairs.map((pair) => {
+                const isPairSelected = pair.files.every(f => selectedFiles.includes(f.id));
+                return (
+                  <div
+                    key={pair.id}
+                    className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                      isPairSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                    }`}
+                    onClick={() => handleSelectPair(pair)}
+                    onDoubleClick={(e) => handleDoubleClick(pair.primaryFile, e)}
+                  >
+                    <div className="text-center">
+                      <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 relative">
+                        <span className="text-xs font-medium text-gray-600">
+                          {pair.primaryFile.name.split('.').pop()?.toUpperCase() || 'FILE'}
+                        </span>
+                        {pair.type === 'paired' && (
+                          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                            2
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-medium text-gray-900 truncate" title={pair.displayName}>
+                        {pair.displayName}
+                      </h3>
+                      {pair.type === 'paired' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                          Paired
+                        </span>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {pair.type === 'paired' 
+                          ? `${pair.primaryFile.size_formatted} + ${pair.pairFile?.size_formatted || '0 Bytes'}`
+                          : pair.primaryFile.size_formatted
+                        }
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">{pair.primaryFile.project_name}</p>
+                      
+                      <div className="flex justify-center mt-3 space-x-1" onClick={(e) => e.stopPropagation()}>
+                        {pair.files.map((file) => (
+                          <FileActions
+                            key={file.id}
+                            fileId={file.id}
+                            fileName={file.name}
+                            contentType={file.content_type}
+                            onDownload={() => handleDownloadFile(file.id, file.name)}
+                            onDelete={async () => {
+                              if (confirm(`Delete ${file.name}?`)) {
+                                try {
+                                  await apiService.deleteFile(file.id);
+                                  await loadFiles();
+                                } catch (error) {
+                                  console.error('Failed to delete file:', error);
+                                }
+                              }
+                            }}
+                            onPreviewComplete={loadFiles}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

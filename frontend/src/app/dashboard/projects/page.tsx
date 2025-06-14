@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, FolderOpen, FileText, MoreVertical, Edit, Trash2, ChevronRight, ChevronDown, Upload, FolderPlus } from 'lucide-react';
+import { Plus, Search, FolderOpen, FileText, MoreVertical, Edit, Trash2, ChevronRight, ChevronDown, Upload, FolderPlus, Loader } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import FileActions from '../../../components/ui/FileActions';
 import FilePreviewModal from '../../../components/ui/FilePreviewModal';
@@ -18,6 +18,8 @@ interface FolderNode {
   children: FolderNode[];
   files: any[];
   isExpanded: boolean;
+  isLoading: boolean;
+  hasChildren: boolean;
   parent_id?: string;
 }
 
@@ -84,35 +86,19 @@ export default function ProjectsPage() {
   };
 
   const buildFolderTree = (folders: any[]): FolderNode[] => {
-    const folderMap = new Map<string, FolderNode>();
-    const rootFolders: FolderNode[] = [];
-
-    folders.forEach(folder => {
-      folderMap.set(folder.id, {
-        id: folder.id,
-        name: folder.name,
-        children: [],
-        files: folder.files || [],
-        isExpanded: false,
-        parent_id: folder.parent
-      });
+    // The API already returns nested data, so we just need to add UI state properties
+    const processFolder = (folder: any): FolderNode => ({
+      id: folder.id,
+      name: folder.name,
+      children: folder.children ? folder.children.map(processFolder) : [],
+      files: folder.files || [],
+      isExpanded: false,
+      isLoading: false,
+      hasChildren: (folder.children && folder.children.length > 0) || folder.subfolders_count > 0,
+      parent_id: folder.parent
     });
 
-    folders.forEach(folder => {
-      const folderNode = folderMap.get(folder.id);
-      if (folderNode) {
-        if (folder.parent) {
-          const parent = folderMap.get(folder.parent);
-          if (parent) {
-            parent.children.push(folderNode);
-          }
-        } else {
-          rootFolders.push(folderNode);
-        }
-      }
-    });
-
-    return rootFolders;
+    return folders.map(processFolder);
   };
 
   const toggleProject = (projectId: string) => {
@@ -123,27 +109,84 @@ export default function ProjectsPage() {
     ));
   };
 
-  const toggleFolder = (projectId: string, folderId: string) => {
+  const toggleFolder = async (projectId: string, folderId: string) => {
+    // First update the UI optimistically
     setProjects(prev => prev.map(project =>
       project.id === projectId
         ? {
             ...project,
-            folders: toggleFolderInTree(project.folders, folderId)
+            folders: updateFolderInTree(project.folders, folderId, folder => ({
+              ...folder,
+              isExpanded: !folder.isExpanded,
+              isLoading: !folder.isExpanded && folder.children.length === 0 && folder.hasChildren
+            }))
           }
         : project
     ));
+
+    // Find the folder to see if we need to load children
+    const project = projects.find(p => p.id === projectId);
+    const folder = findFolderInTree(project?.folders || [], folderId);
+    
+    if (folder && !folder.isExpanded && folder.children.length === 0 && folder.hasChildren) {
+      // Need to lazy load folder contents
+      try {
+        const contents = await apiService.getFolderContents(folderId);
+        
+        setProjects(prev => prev.map(proj =>
+          proj.id === projectId
+            ? {
+                ...proj,
+                folders: updateFolderInTree(proj.folders, folderId, f => ({
+                  ...f,
+                  children: buildFolderTree(contents.folders || []),
+                  files: contents.files || [],
+                  isLoading: false,
+                  isExpanded: true
+                }))
+              }
+            : proj
+        ));
+      } catch (error) {
+        console.error('Failed to load folder contents:', error);
+        // Reset loading state on error
+        setProjects(prev => prev.map(proj =>
+          proj.id === projectId
+            ? {
+                ...proj,
+                folders: updateFolderInTree(proj.folders, folderId, f => ({
+                  ...f,
+                  isLoading: false,
+                  isExpanded: false
+                }))
+              }
+            : proj
+        ));
+      }
+    }
   };
 
-  const toggleFolderInTree = (folders: FolderNode[], folderId: string): FolderNode[] => {
+  const updateFolderInTree = (folders: FolderNode[], folderId: string, updateFn: (folder: FolderNode) => FolderNode): FolderNode[] => {
     return folders.map(folder => {
       if (folder.id === folderId) {
-        return { ...folder, isExpanded: !folder.isExpanded };
+        return updateFn(folder);
       }
       return {
         ...folder,
-        children: toggleFolderInTree(folder.children, folderId)
+        children: updateFolderInTree(folder.children, folderId, updateFn)
       };
     });
+  };
+
+  const findFolderInTree = (folders: FolderNode[], folderId: string): FolderNode | null => {
+    for (const folder of folders) {
+      if (folder.id === folderId) {
+        return folder;
+      }
+      const found = findFolderInTree(folder.children, folderId);
+      if (found) return found;
+    }
+    return null;
   };
 
   const openUploadModal = (projectId: string, projectName: string, folderId?: string, folderName?: string) => {
@@ -332,8 +375,11 @@ export default function ProjectsPage() {
             <button
               onClick={() => toggleFolder(projectId, folder.id)}
               className="p-1 hover:bg-gray-200 rounded"
+              disabled={folder.isLoading}
             >
-              {folder.children.length > 0 || folder.files.length > 0 ? (
+              {folder.isLoading ? (
+                <Loader className="w-4 h-4 animate-spin text-blue-600" />
+              ) : folder.hasChildren || folder.children.length > 0 || folder.files.length > 0 ? (
                 folder.isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
               ) : (
                 <div className="w-4 h-4" />

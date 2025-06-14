@@ -123,10 +123,15 @@ class ApiService {
           errorMessage = errorData.message;
         } else if (errorData.detail) {
           errorMessage = errorData.detail;
+        } else {
+          // Include the full error data for debugging 500 errors
+          console.error('Full error response:', errorData);
+          errorMessage = `API Error: ${response.status} ${response.statusText}`;
         }
       } catch (parseError) {
         // If JSON parsing fails, use status text as fallback
         errorMessage = `API Error: ${response.status} ${response.statusText}`;
+        console.error('Failed to parse error response:', parseError);
       }
       
       if (response.status === 401) {
@@ -202,11 +207,23 @@ class ApiService {
     }>(url);
   }
 
-  async getFolderFiles(folderId: string): Promise<{ files: FileItem[] }> {
-    return this.request<{ files: FileItem[] }>(`${API_ENDPOINTS.LIST_FILES}?folder_id=${folderId}`);
+  async getFolderFiles(folderId: string, page: number = 1, pageSize: number = 40): Promise<{ 
+    files: FileItem[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> {
+    return this.request<{ 
+      files: FileItem[];
+      total: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+    }>(`${API_ENDPOINTS.LIST_FILES}?folder_id=${folderId}&page=${page}&page_size=${pageSize}`);
   }
 
-  async getAllFiles(page: number = 1, pageSize: number = 20, search?: string): Promise<{ files: FileItem[]; total: number }> {
+  async getAllFiles(page: number = 1, pageSize: number = 40, search?: string): Promise<{ files: FileItem[]; total: number }> {
     let url = `${API_ENDPOINTS.ALL_FILES}?page=${page}&page_size=${pageSize}`;
     if (search) {
       url += `&search=${encodeURIComponent(search)}`;
@@ -326,6 +343,19 @@ class ApiService {
   async getProjectTree(projectId: string): Promise<any> {
     return this.request<any>(`${API_ENDPOINTS.PROJECTS}${projectId}/tree/`);
   }
+
+  async getProjectFolders(projectId: string, parentId?: string): Promise<any> {
+    let url = `${API_ENDPOINTS.PROJECTS}${projectId}/folders/`;
+    if (parentId) {
+      url += `?parent_id=${parentId}`;
+    }
+    return this.request<any>(url);
+  }
+
+  async getFolderContents(folderId: string, page: number = 1, pageSize: number = 40): Promise<any> {
+    return this.request<any>(`${API_ENDPOINTS.FOLDERS}${folderId}/contents/?page=${page}&page_size=${pageSize}`);
+  }
+
 
   async getVideoManifest(fileId: string): Promise<any> {
     return this.request<any>(`/media-preview/video/${fileId}/manifest/`);
