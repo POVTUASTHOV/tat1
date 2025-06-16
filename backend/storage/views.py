@@ -133,12 +133,10 @@ class FolderViewSet(viewsets.ModelViewSet):
         return Response({
             'folders': FolderSerializer(folders, many=True).data,
             'files': FileSerializer(page_obj, many=True).data,
-            'pagination': {
-                'total': paginator.count,
-                'page': page,
-                'page_size': page_size,
-                'total_pages': paginator.num_pages
-            }
+            'total': paginator.count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': paginator.num_pages
         })
     
     @action(detail=True, methods=['get'])
