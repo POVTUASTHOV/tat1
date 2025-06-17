@@ -9,6 +9,8 @@ import ArchivePreviewModal from '../../../../components/ui/ArchivePreviewModal';
 import { apiService } from '../../../../lib/api';
 import { FileItem } from '../../../../types';
 import { formatFileSize, formatDate, createFilePairs, FilePair } from '../../../../lib/utils';
+import FileIcon from '../../../../components/ui/FileIcon';
+import Pagination from '../../../../components/ui/Pagination';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -23,11 +25,21 @@ export default function FilesPage() {
   const [showArchivePreview, setShowArchivePreview] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
-  const pageSize = 40;
+  const pageSize = 20; // Reduced for better performance on weak servers
 
+  // Debounced search to reduce API calls
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
   useEffect(() => {
     loadFiles();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, debouncedSearchTerm]);
 
   useEffect(() => {
     const pairs = createFilePairs(files);
@@ -37,7 +49,7 @@ export default function FilesPage() {
   const loadFiles = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getAllFiles(currentPage, pageSize, searchTerm);
+      const response = await apiService.getAllFiles(currentPage, pageSize, debouncedSearchTerm);
       setFiles(response.files);
       setTotalFiles(response.total);
     } catch (error) {
@@ -191,9 +203,16 @@ export default function FilesPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {filePairs.length} items ({totalFiles} files total)
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">
+                  📁 {filePairs.length} items ({totalFiles.toLocaleString()} files total)
+                </span>
+                {totalFiles > 100 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    📊 Large collection
+                  </span>
+                )}
+              </div>
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -260,15 +279,25 @@ export default function FilesPage() {
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {pair.displayName}
-                          {pair.type === 'paired' && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              Paired
-                            </span>
-                          )}
+                        <div className="flex items-center">
+                          <FileIcon 
+                            fileName={pair.primaryFile.name}
+                            contentType={pair.primaryFile.content_type}
+                            size="md"
+                            className="mr-3 flex-shrink-0"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {pair.displayName}
+                              {pair.type === 'paired' && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Paired
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">{pair.primaryFile.file_path}</div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">{pair.primaryFile.file_path}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {pair.primaryFile.project_name}
@@ -322,44 +351,40 @@ export default function FilesPage() {
           </div>
         ) : (
           <div className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
               {filePairs.map((pair) => {
                 const isPairSelected = pair.files.every(f => selectedFiles.includes(f.id));
                 return (
                   <div
                     key={pair.id}
-                    className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                    className={`border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-all cursor-pointer hover:bg-gray-50 ${
                       isPairSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
                     }`}
                     onClick={() => handleSelectPair(pair)}
                     onDoubleClick={(e) => handleDoubleClick(pair.primaryFile, e)}
                   >
                     <div className="text-center">
-                      <div className="bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 relative">
-                        <span className="text-xs font-medium text-gray-600">
-                          {pair.primaryFile.name.split('.').pop()?.toUpperCase() || 'FILE'}
-                        </span>
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 relative">
+                        <FileIcon 
+                          fileName={pair.primaryFile.name}
+                          contentType={pair.primaryFile.content_type}
+                          size="md"
+                        />
                         {pair.type === 'paired' && (
-                          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center font-bold">
                             2
                           </span>
                         )}
                       </div>
-                      <h3 className="text-sm font-medium text-gray-900 truncate" title={pair.displayName}>
+                      <h3 className="text-xs font-medium text-gray-900 truncate mb-1" title={pair.displayName}>
                         {pair.displayName}
                       </h3>
-                      {pair.type === 'paired' && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                          Paired
-                        </span>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500">
                         {pair.type === 'paired' 
                           ? `${pair.primaryFile.size_formatted} + ${pair.pairFile?.size_formatted || '0 Bytes'}`
                           : pair.primaryFile.size_formatted
                         }
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">{pair.primaryFile.project_name}</p>
                       
                       <div className="flex justify-center mt-3 space-x-1" onClick={(e) => e.stopPropagation()}>
                         {pair.files.map((file) => (
@@ -400,32 +425,15 @@ export default function FilesPage() {
         )}
 
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalFiles)} of {totalFiles} files
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <span className="px-3 py-1 text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalFiles}
+            itemsPerPage={pageSize}
+            onPageChange={setCurrentPage}
+            isLoading={isLoading}
+            showInfo={true}
+          />
         )}
       </div>
 

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Pagination - Data Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .instructions { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .step { margin: 10px 0; }
+        .expected { background: #f1f8e9; padding: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Pagination trong Projects</h1>
+    
+    <div class="instructions">
+        <h2>Hướng dẫn test:</h2>
+        
+        <div class="step">
+            <strong>1. Mở ứng dụng:</strong><br>
+            Truy cập: <a href="http://localhost:3004/dashboard/projects" target="_blank">http://localhost:3004/dashboard/projects</a>
+        </div>
+        
+        <div class="step">
+            <strong>2. Đăng nhập:</strong><br>
+            Email: povtuas@gmail.com<br>
+            Password: 123456789
+        </div>
+        
+        <div class="step">
+            <strong>3. Kiểm tra Projects page:</strong><br>
+            - Tìm project "test_project" (1998 files)<br>
+            - Click vào arrow để expand project
+        </div>
+        
+        <div class="step">
+            <strong>4. Test folder expansion:</strong><br>
+            - Click vào folder "dataset" → "DJI_0372_W" → "DJI_0378_W_labeled"<br>
+            - Folder có 999 files sẽ hiển thị pagination
+        </div>
+        
+        <div class="expected">
+            <strong>Kết quả mong đợi:</strong><br>
+            ✅ Folder name hiển thị: "DJI_0378_W_labeled (20 of 999 files • Page 1/50)"<br>
+            ✅ Pagination controls xuất hiện dưới files<br>
+            ✅ Console log hiển thị: "Folder contents response: {...}" với total: 999<br>
+            ✅ Có thể click Next/Previous để chuyển trang
+        </div>
+    </div>
+    
+    <h2>🔍 Debug Console</h2>
+    <p>Mở Developer Tools (F12) và kiểm tra Console tab để xem debug logs.</p>
+    
+    <h2>📝 Test Results</h2>
+    <p>Ghi lại kết quả test của bạn:</p>
+    <textarea style="width: 100%; height: 150px; padding: 10px;" placeholder="Ghi lại kết quả test ở đây..."></textarea>
+    
+    <script>
+        console.log('📋 Test pagination ready!');
+        console.log('🌐 Frontend URL: http://localhost:3004/dashboard/projects');
+        console.log('📧 Login: povtuas@gmail.com / 123456789');
+    </script>
+</body>
+</html>

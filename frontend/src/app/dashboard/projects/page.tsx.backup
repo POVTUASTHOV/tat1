@@ -13,8 +13,6 @@ import { formatFileSize } from '../../../lib/utils';
 import { useToastStore } from '../../../stores/toastStore';
 import FileIcon from '../../../components/ui/FileIcon';
 import Pagination from '../../../components/ui/Pagination';
-import VerticalBreadcrumb from '../../../components/ui/VerticalBreadcrumb';
-import AddressBar from '../../../components/ui/AddressBar';
 
 interface FolderNode {
   id: string;
@@ -69,17 +67,6 @@ export default function ProjectsPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showArchivePreview, setShowArchivePreview] = useState(false);
   const [selectedFile, setSelectedFile] = useState<any>(null);
-  
-  // Breadcrumb navigation state
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{
-    id: string;
-    name: string;
-    type: 'project' | 'folder';
-    projectId?: string;
-  }>>([]);
-
-  // Address bar navigation state
-  const [currentAddressPath, setCurrentAddressPath] = useState<string>('/');
 
   useEffect(() => {
     loadProjects();
@@ -171,14 +158,6 @@ export default function ProjectsPage() {
   };
 
   const toggleProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    
-    // Clear breadcrumbs if collapsing project
-    if (project?.isExpanded) {
-      setBreadcrumbs([]);
-      setCurrentAddressPath('/');
-    }
-    
     setProjects(prev => prev.map(project =>
       project.id === projectId
         ? { ...project, isExpanded: !project.isExpanded }
@@ -208,11 +187,7 @@ export default function ProjectsPage() {
     if (folder && !folder.isExpanded && folder.children.length === 0 && folder.hasChildren) {
       // Need to lazy load folder contents with pagination
       try {
-        const contents = await apiService.getProjectFiles(projectId, {
-          folderId: folderId,
-          page: 1,
-          pageSize: 50
-        }); // Load first 50 files
+        const contents = await apiService.getFolderContents(folderId, 1, 20); // Load first 20 files
         console.log('Folder contents response:', contents);
         console.log('Total files:', contents.total);
         console.log('Total pages:', contents.total_pages);
@@ -223,7 +198,7 @@ export default function ProjectsPage() {
                 ...proj,
                 folders: updateFolderInTree(proj.folders, folderId, f => ({
                   ...f,
-                  children: [], // Subfolders will be loaded separately if needed
+                  children: buildFolderTree(contents.folders || []),
                   files: contents.files || [],
                   isLoading: false,
                   isExpanded: true,
@@ -236,11 +211,6 @@ export default function ProjectsPage() {
               }
             : proj
         ));
-
-        // Update breadcrumbs when folder is expanded
-        const breadcrumbPath = buildBreadcrumbPath(projectId, folderId);
-        setBreadcrumbs(breadcrumbPath);
-        setCurrentAddressPath(breadcrumbsToPath(breadcrumbPath));
       } catch (error) {
         console.error('Failed to load folder contents:', error);
         // Reset loading state on error
@@ -283,141 +253,6 @@ export default function ProjectsPage() {
     return null;
   };
 
-  // Build breadcrumb path for a folder
-  const buildBreadcrumbPath = (projectId: string, folderId: string): Array<{
-    id: string;
-    name: string;
-    type: 'project' | 'folder';
-    projectId?: string;
-  }> => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-
-    const path: Array<{ id: string; name: string; type: 'project' | 'folder'; projectId?: string }> = [
-      { id: projectId, name: project.name, type: 'project' }
-    ];
-
-    // Find path to folder
-    const findPath = (folders: FolderNode[], targetId: string, currentPath: Array<{ id: string; name: string; type: 'project' | 'folder'; projectId?: string }>): Array<{ id: string; name: string; type: 'project' | 'folder'; projectId?: string }> | null => {
-      for (const folder of folders) {
-        const newPath = [...currentPath, { id: folder.id, name: folder.name, type: 'folder' as const, projectId }];
-        
-        if (folder.id === targetId) {
-          return newPath;
-        }
-        
-        const found = findPath(folder.children, targetId, newPath);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const folderPath = findPath(project.folders, folderId, path);
-    return folderPath || path;
-  };
-
-  // Convert breadcrumbs to address path
-  const breadcrumbsToPath = (breadcrumbs: Array<{ id: string; name: string; type: 'project' | 'folder' }>): string => {
-    if (breadcrumbs.length === 0) return '/';
-    return '/' + breadcrumbs.map(b => b.name).join('/');
-  };
-
-  // Convert address path to navigation
-  const pathToBreadcrumbs = (path: string): void => {
-    if (path === '/' || !path) {
-      setBreadcrumbs([]);
-      setCurrentAddressPath('/');
-      return;
-    }
-
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    const segments = cleanPath.split('/').filter(p => p.length > 0);
-
-    // Find matching project and folders
-    for (const project of projects) {
-      if (segments[0] === project.name) {
-        if (segments.length === 1) {
-          // Navigate to project root
-          const newBreadcrumbs = [{ id: project.id, name: project.name, type: 'project' as const }];
-          setBreadcrumbs(newBreadcrumbs);
-          setCurrentAddressPath(breadcrumbsToPath(newBreadcrumbs));
-          
-          if (!project.isExpanded) {
-            toggleProject(project.id);
-          }
-          return;
-        } else {
-          // Try to find the folder path
-          const folderPath = segments.slice(1);
-          const foundPath = findFolderByPath(project.folders, folderPath);
-          
-          if (foundPath) {
-            const newBreadcrumbs = [
-              { id: project.id, name: project.name, type: 'project' as const },
-              ...foundPath.map(f => ({ id: f.id, name: f.name, type: 'folder' as const, projectId: project.id }))
-            ];
-            setBreadcrumbs(newBreadcrumbs);
-            setCurrentAddressPath(breadcrumbsToPath(newBreadcrumbs));
-            
-            // Expand project and folder
-            if (!project.isExpanded) {
-              toggleProject(project.id);
-            }
-            const lastFolder = foundPath[foundPath.length - 1];
-            if (lastFolder && !lastFolder.isExpanded) {
-              toggleFolder(project.id, lastFolder.id);
-            }
-            return;
-          }
-        }
-      }
-    }
-
-    // Path not found - show error
-    alert('Invalid path: Path not found');
-  };
-
-  // Find folder by path segments
-  const findFolderByPath = (folders: FolderNode[], pathSegments: string[]): FolderNode[] | null => {
-    if (pathSegments.length === 0) return [];
-
-    for (const folder of folders) {
-      if (folder.name === pathSegments[0]) {
-        if (pathSegments.length === 1) {
-          return [folder];
-        } else {
-          const subPath = findFolderByPath(folder.children, pathSegments.slice(1));
-          if (subPath) {
-            return [folder, ...subPath];
-          }
-        }
-      }
-    }
-    return null;
-  };
-
-  // Navigate to breadcrumb item
-  const navigateToBreadcrumb = (item: { id: string; name: string; type: 'project' | 'folder'; projectId?: string }) => {
-    if (item.type === 'project') {
-      // Navigate to project root
-      const newBreadcrumbs = [item];
-      setBreadcrumbs(newBreadcrumbs);
-      setCurrentAddressPath(breadcrumbsToPath(newBreadcrumbs));
-      // Expand project if not already expanded
-      const project = projects.find(p => p.id === item.id);
-      if (project && !project.isExpanded) {
-        toggleProject(item.id);
-      }
-    } else if (item.type === 'folder' && item.projectId) {
-      // Navigate to specific folder
-      const newPath = buildBreadcrumbPath(item.projectId, item.id);
-      setBreadcrumbs(newPath);
-      setCurrentAddressPath(breadcrumbsToPath(newPath));
-      // Make sure folder is expanded and loaded
-      toggleFolder(item.projectId, item.id);
-    }
-  };
-
   const loadFolderPage = async (projectId: string, folderId: string, page: number) => {
     const project = projects.find(p => p.id === projectId);
     const folder = findFolderInTree(project?.folders || [], folderId);
@@ -438,11 +273,7 @@ export default function ProjectsPage() {
     ));
 
     try {
-      const contents = await apiService.getProjectFiles(projectId, {
-        folderId: folderId,
-        page: page,
-        pageSize: 50
-      });
+      const contents = await apiService.getFolderContents(folderId, page, 20);
       
       setProjects(prev => prev.map(proj =>
         proj.id === projectId
@@ -679,8 +510,8 @@ export default function ProjectsPage() {
             <span className="text-sm font-medium">{folder.name}</span>
             <span className="text-xs text-gray-500">
               ({folder.files.length} of {Math.max(folder.totalFiles, folder.files.length)} files{folder.children.length > 0 ? `, ${folder.children.length} folders` : ''})
-              {(folder.totalFiles > 50 || folder.totalPages > 1) && (
-                <span className="ml-1 text-blue-600">• Page {folder.currentPage}/{Math.max(folder.totalPages, 1)}</span>
+              {(folder.totalFiles > 5 || folder.files.length > 5) && (
+                <span className="ml-1 text-blue-600">• Page {folder.currentPage}/{folder.totalPages}</span>
               )}
             </span>
           </div>
@@ -748,13 +579,13 @@ export default function ProjectsPage() {
                 ))}
                 
                 {/* Folder Pagination */}
-                {(folder.totalFiles > 50 || folder.totalPages > 1) && (
+                {(folder.totalFiles > 5 || folder.files.length > 5) && (
                   <div style={{ marginLeft: `${(level + 1) * 20}px` }} className="py-2">
                     <Pagination
                       currentPage={folder.currentPage}
-                      totalPages={Math.max(folder.totalPages, Math.ceil(folder.files.length / 50))}
+                      totalPages={Math.max(folder.totalPages, Math.ceil(folder.files.length / 20))}
                       totalItems={Math.max(folder.totalFiles, folder.files.length)}
-                      itemsPerPage={50}
+                      itemsPerPage={20}
                       onPageChange={(page) => loadFolderPage(projectId, folder.id, page)}
                       isLoading={folder.isLoadingMoreFiles}
                       showInfo={false}
@@ -852,60 +683,6 @@ export default function ProjectsPage() {
             <span className="text-blue-600 ml-1">matching "{searchTerm}"</span>
           )}
         </div>
-
-        {/* Windows File Explorer Style Address Bar */}
-        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className="text-sm font-medium text-gray-700">🔍 Address Bar (Test):</span>
-            <span className="text-xs text-gray-500">Current path: {currentAddressPath}</span>
-          </div>
-          <AddressBar
-            currentPath={currentAddressPath}
-            onNavigate={pathToBreadcrumbs}
-            className="w-full"
-          />
-        </div>
-
-        {/* Horizontal Breadcrumb Navigation */}
-        {breadcrumbs.length > 0 && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center space-x-2 text-sm">
-              <span className="text-gray-600 font-medium">You are here:</span>
-              {breadcrumbs.map((item, index) => (
-                <div key={item.id} className="flex items-center space-x-2">
-                  {index > 0 && (
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                  )}
-                  <button
-                    onClick={() => navigateToBreadcrumb(item)}
-                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors ${
-                      index === breadcrumbs.length - 1
-                        ? 'bg-blue-100 text-blue-800 font-medium cursor-default'
-                        : 'text-blue-600 hover:bg-blue-100 hover:text-blue-800 font-medium'
-                    }`}
-                  >
-                    {item.type === 'project' ? (
-                      <FolderOpen className="w-4 h-4" />
-                    ) : (
-                      <FileIcon fileName={item.name} contentType="" isFolder={true} size="sm" className="w-4 h-4" />
-                    )}
-                    <span>{item.name}</span>
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  setBreadcrumbs([]);
-                  setCurrentAddressPath('/');
-                }}
-                className="ml-4 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
-                title="Clear navigation"
-              >
-                ✕ Clear
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Projects Display - List or Grid View */}
         {viewMode === 'list' ? (
@@ -1075,18 +852,14 @@ export default function ProjectsPage() {
                   </div>
                   <div className="flex items-center space-x-1">
                     <button
-                      onClick={() => openUploadModal(project.id, project.name)}
+                      onClick={() => handleUploadToProject(project.id, project.name)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Upload files"
                     >
                       <Upload className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        setSelectedProjectForFolder(project.id);
-                        setSelectedParentFolder('');
-                        setShowCreateFolderModal(true);
-                      }}
+                      onClick={() => handleCreateFolder(project.id)}
                       className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                       title="Create folder"
                     >
@@ -1114,7 +887,7 @@ export default function ProjectsPage() {
                 <div className="space-y-2 text-sm text-gray-500">
                   <div className="flex justify-between">
                     <span>Files:</span>
-                    <span className="font-medium">{project.files_count?.toLocaleString() || 0}</span>
+                    <span className="font-medium">{project.file_count?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Size:</span>

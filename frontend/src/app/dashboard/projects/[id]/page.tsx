@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Upload, FolderPlus, Search, Trash2, Eye, Archive, Video, Check, AlertCircle, Cpu, Zap, Filter, SortAsc, SortDesc, Folder, ChevronRight, Home } from 'lucide-react';
+import { ArrowLeft, Upload, FolderPlus, Search, Trash2, Eye, Archive, Video, Check, AlertCircle, Cpu, Zap, Filter, SortAsc, SortDesc, Folder, ChevronRight, Home, Grid3X3, List } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
 import FileActions from '../../../../components/ui/FileActions';
 import FilePreviewModal from '../../../../components/ui/FilePreviewModal';
@@ -10,6 +10,9 @@ import ArchivePreviewModal from '../../../../components/ui/ArchivePreviewModal';
 import { apiService } from '../../../../lib/api';
 import { Project, FileItem } from '../../../../types';
 import { formatFileSize, formatDate } from '../../../../lib/utils';
+import FileIcon from '../../../../components/ui/FileIcon';
+import Pagination from '../../../../components/ui/Pagination';
+import VerticalBreadcrumb from '../../../../components/ui/VerticalBreadcrumb';
 
 // Types for video processing
 interface VideoProcessingStatus {
@@ -78,6 +81,12 @@ const FileRow = memo(({
     </td>
     <td className="px-6 py-4 whitespace-nowrap">
       <div className="flex items-center">
+        <FileIcon 
+          fileName={file.name}
+          contentType={file.content_type}
+          size="md"
+          className="mr-3 flex-shrink-0"
+        />
         <div className="flex-1">
           <div className="flex items-center">
             <span className="text-sm font-medium text-gray-900">{file.name}</span>
@@ -148,6 +157,109 @@ const FileRow = memo(({
 
 FileRow.displayName = 'FileRow';
 
+// FileCard component for grid view
+const FileCard = memo<{
+  file: FileItem;
+  isSelected: boolean;
+  onToggleSelect: (fileId: string) => void;
+  onPreview: (file: FileItem, e?: React.MouseEvent) => void;
+  onDownload: (fileId: string, fileName: string) => void;
+  onDelete: (fileId: string) => void;
+  processingStatus?: VideoProcessingStatus;
+}>(({ file, isSelected, onToggleSelect, onPreview, onDownload, onDelete, processingStatus }) => {
+  const isPreviewable = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'video/mp4', 'video/webm', 'video/ogg', 'text/plain', 'application/pdf'].includes(file.content_type);
+  const isArchive = ['application/zip', 'application/x-rar-compressed', 'application/x-tar', 'application/gzip'].includes(file.content_type);
+  const isVideo = file.content_type.startsWith('video/');
+  const isProcessing = processingStatus?.processing;
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      {/* Header with checkbox and status */}
+      <div className="flex items-center justify-between mb-3">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelect(file.id)}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        {isProcessing && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <Cpu className="w-3 h-3 mr-1" />
+            Processing
+          </span>
+        )}
+      </div>
+
+      {/* File icon and name */}
+      <div className="text-center mb-3">
+        <div className="flex justify-center mb-2">
+          <FileIcon fileName={file.name} contentType={file.content_type} className="w-12 h-12" />
+        </div>
+        <h3 className="text-sm font-medium text-gray-900 truncate" title={file.name}>
+          {file.name}
+        </h3>
+      </div>
+
+      {/* File info */}
+      <div className="space-y-1 mb-3 text-xs text-gray-500">
+        <div className="flex justify-between">
+          <span>Size:</span>
+          <span>{file.size_formatted}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Type:</span>
+          <span className="flex items-center">
+            {file.content_type}
+            {isVideo && <Video className="w-3 h-3 ml-1 text-purple-500" />}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Modified:</span>
+          <span>{formatDate(file.uploaded_at)}</span>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-center space-x-1">
+        {isArchive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => onPreview(file, e)}
+            title="View archive contents"
+            className="bg-orange-100 text-orange-600 hover:bg-orange-200"
+          >
+            <Archive className="w-4 h-4" />
+          </Button>
+        )}
+        
+        {isPreviewable && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => onPreview(file, e)}
+            title="Preview file"
+            className="bg-blue-100 text-blue-600 hover:bg-blue-200"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+        )}
+        
+        <FileActions
+          fileId={file.id}
+          fileName={file.name}
+          contentType={file.content_type}
+          onDownload={() => onDownload(file.id, file.name)}
+          onDelete={onDelete}
+          onPreviewComplete={() => {}}
+        />
+      </div>
+    </div>
+  );
+});
+
+FileCard.displayName = 'FileCard';
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.id as string;
@@ -176,12 +288,13 @@ export default function ProjectDetailPage() {
   const [processingStatuses, setProcessingStatuses] = useState<Record<string, VideoProcessingStatus>>({});
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    pageSize: 40, // Set to 40 for better performance with large folders
+    pageSize: 50, // Set to 50 files per page as requested
     totalPages: 1,
     total: 0,
     hasMorePages: false
   });
   const [viewMode, setViewMode] = useState<'paginated' | 'infinite'>('paginated');
+  const [displayMode, setDisplayMode] = useState<'list' | 'grid'>('list');
   const [sortBy, setSortBy] = useState<'name' | 'size' | 'date' | 'type'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterType, setFilterType] = useState<string>('all');
@@ -195,6 +308,7 @@ export default function ProjectDetailPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
 
   // Load data when projectId, currentFolderId, or search changes
   useEffect(() => {
@@ -269,10 +383,14 @@ export default function ProjectDetailPage() {
               hasMorePages: filesResponse.page < filesResponse.total_pages
             });
 
-            // Auto-switch to paginated view for very large directories
-            if (filesResponse.total > 10000 && !debouncedSearchTerm && viewMode === 'infinite') {
+            // Auto-switch to paginated view for large directories (500+ files)
+            if (filesResponse.total > 500 && !debouncedSearchTerm && viewMode === 'infinite') {
               console.log(`Auto-switching to paginated view for performance (${filesResponse.total} files)`);
               setViewMode('paginated');
+              // Reset files to only show current page when switching to paginated mode
+              setFiles(filesResponse.files);
+              // Show notification to user
+              alert(`Switched to paginated view for better performance (${filesResponse.total} files found). You can change back to infinite scroll using the View selector if needed.`);
             }
 
             // Optimized video processing check
@@ -344,6 +462,24 @@ export default function ProjectDetailPage() {
         hasMorePages: filesResponse.page < filesResponse.total_pages
       });
 
+      // Auto-switch to paginated view for large directories (200+ files) - optimized for weak servers
+      if (filesResponse.total > 200 && viewMode === 'infinite') {
+        console.log(`Auto-switching to paginated view for performance (${filesResponse.total} files)`);
+        setViewMode('paginated');
+        // Reset files to only show current page when switching to paginated mode
+        setFiles(filesResponse.files);
+        // Show subtle notification to user
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50';
+        notification.innerHTML = `Switched to paginated view (${filesResponse.total} files)`;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 5000);
+      }
+
       // Optimized video processing check - only for new files
       const videoFiles = filesResponse.files.filter(file => file.content_type.startsWith('video/'));
       videoFiles.forEach(file => {
@@ -363,6 +499,19 @@ export default function ProjectDetailPage() {
       await loadProjectData(pagination.currentPage + 1, debouncedSearchTerm, true);
     }
   }, [pagination.currentPage, pagination.hasMorePages, isLoadingMore, debouncedSearchTerm, loadProjectData]);
+
+  const handleViewModeChange = useCallback((newViewMode: 'paginated' | 'infinite') => {
+    if (newViewMode !== viewMode) {
+      setViewMode(newViewMode);
+      // Reset files and pagination when switching modes
+      setFiles([]);
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      // Reload data with new view mode
+      setTimeout(() => {
+        loadProjectData(1, debouncedSearchTerm, false, currentFolderId);
+      }, 100);
+    }
+  }, [viewMode, debouncedSearchTerm, currentFolderId, loadProjectData]);
 
   // Navigation functions
   const handleFolderClick = useCallback((folderId: string) => {
@@ -392,15 +541,15 @@ export default function ProjectDetailPage() {
       return;
     }
 
-    // Safety limit: Don't auto-load more if we already have too many files displayed
-    if (files.length >= 1000) {
-      console.log('Reached display limit of 1000 files. Switch to paginated view for better performance.');
+    // Safety limit for weak servers: Don't auto-load more if we already have too many files displayed
+    if (files.length >= 500) {
+      console.log('Reached display limit of 500 files. Switch to paginated view for better performance.');
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && pagination.hasMorePages && !isLoadingMore && files.length < 1000) {
+        if (entries[0].isIntersecting && pagination.hasMorePages && !isLoadingMore && files.length < 500) {
           loadMoreFiles();
         }
       },
@@ -501,7 +650,15 @@ export default function ProjectDetailPage() {
   }, [processingStatuses]);
 
   // Files are already filtered by the backend API
-  const filteredFiles = useMemo(() => files, [files]);
+  const filteredFiles = useMemo(() => {
+    // In paginated mode, only show files for current page
+    if (viewMode === 'paginated') {
+      // Return only the files from the current API response
+      return files;
+    }
+    // In infinite mode, show all loaded files
+    return files;
+  }, [files, viewMode]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -721,45 +878,43 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {/* Breadcrumb Navigation */}
+      {/* Horizontal Breadcrumb Navigation */}
       {breadcrumbs.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleBreadcrumbClick(breadcrumbs[0])}
-              className="text-blue-600 hover:bg-blue-50"
-            >
-              <Home className="w-4 h-4 mr-1" />
-              {breadcrumbs[0].name}
-            </Button>
-            
-            {breadcrumbs.slice(1).map((breadcrumb, index) => (
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex items-center space-x-2 text-sm">
+            <span className="text-gray-600 font-medium">Current path:</span>
+            {breadcrumbs.map((breadcrumb, index) => (
               <div key={breadcrumb.id} className="flex items-center space-x-2">
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-                <Button
-                  variant="ghost"
-                  size="sm"
+                {index > 0 && (
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                )}
+                <button
                   onClick={() => handleBreadcrumbClick(breadcrumb)}
-                  className="text-blue-600 hover:bg-blue-50"
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors ${
+                    index === breadcrumbs.length - 1
+                      ? 'bg-blue-100 text-blue-800 font-medium cursor-default'
+                      : 'text-blue-600 hover:bg-blue-100 hover:text-blue-800 font-medium'
+                  }`}
                 >
-                  {breadcrumb.name}
-                </Button>
+                  {breadcrumb.type === 'project' ? (
+                    <Home className="w-4 h-4" />
+                  ) : (
+                    <FileIcon fileName={breadcrumb.name} contentType="" isFolder={true} size="sm" className="w-4 h-4" />
+                  )}
+                  <span>{breadcrumb.name}</span>
+                </button>
               </div>
             ))}
             
             {breadcrumbs.length > 1 && (
-              <div className="ml-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBackToParent}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-1" />
-                  Back
-                </Button>
-              </div>
+              <button
+                onClick={handleBackToParent}
+                className="ml-4 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md border border-gray-300"
+                title="Go back to parent folder"
+              >
+                <ArrowLeft className="w-3 h-3 mr-1 inline" />
+                Back
+              </button>
             )}
           </div>
         </div>
@@ -772,22 +927,27 @@ export default function ProjectDetailPage() {
             <h3 className="text-lg font-medium text-gray-900">Folders</h3>
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
               {folders.map((folder) => (
                 <div
                   key={folder.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50"
+                  className="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-all cursor-pointer hover:bg-gray-50"
                   onClick={() => handleFolderClick(folder.id)}
                 >
                   <div className="text-center">
-                    <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <Folder className="w-6 h-6 text-blue-600" />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <FileIcon 
+                        fileName={folder.name}
+                        contentType=""
+                        isFolder={true}
+                        size="md"
+                      />
                     </div>
-                    <h3 className="text-sm font-medium text-gray-900 truncate" title={folder.name}>
+                    <h3 className="text-xs font-medium text-gray-900 truncate mb-1" title={folder.name}>
                       {folder.name}
                     </h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {folder.files_count} files, {folder.subfolders_count} folders
+                    <p className="text-xs text-gray-500">
+                      {folder.files_count} files
                     </p>
                   </div>
                 </div>
@@ -816,7 +976,7 @@ export default function ProjectDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setViewMode('paginated')}
+              onClick={() => handleViewModeChange('paginated')}
               className="flex-shrink-0"
             >
               Switch to Paginated
@@ -878,28 +1038,78 @@ export default function ProjectDetailPage() {
               {/* View Mode Toggle */}
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700">View:</span>
-                <select
-                  value={viewMode}
-                  onChange={(e) => setViewMode(e.target.value as 'paginated' | 'infinite')}
-                  className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="infinite">Infinite Scroll</option>
-                  <option value="paginated">Paginated</option>
-                </select>
+                <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                  <button
+                    onClick={() => handleViewModeChange('paginated')}
+                    className={`px-3 py-1 text-sm font-medium transition-colors ${
+                      viewMode === 'paginated'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    📄 Pages
+                  </button>
+                  <button
+                    onClick={() => handleViewModeChange('infinite')}
+                    className={`px-3 py-1 text-sm font-medium transition-colors border-l ${
+                      viewMode === 'infinite'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    ♾️ Scroll
+                  </button>
+                </div>
               </div>
 
-              {/* Results Info */}
+              {/* Display Mode Toggle */}
+              <div className="flex items-center ml-4">
+                <span className="text-sm font-medium text-gray-700 mr-2">View:</span>
+                <div className="flex rounded border border-gray-300 overflow-hidden">
+                  <button
+                    onClick={() => setDisplayMode('list')}
+                    className={`px-3 py-1 text-sm font-medium transition-colors ${
+                      displayMode === 'list'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                    title="List view"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDisplayMode('grid')}
+                    className={`px-3 py-1 text-sm font-medium transition-colors border-l ${
+                      displayMode === 'grid'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                    title="Grid view"
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Enhanced Results Info */}
               <div className="text-sm text-gray-500">
                 {pagination.total > 0 && (
-                  <>
-                    Showing {files.length} of {pagination.total} files
-                    {debouncedSearchTerm && ` for "${debouncedSearchTerm}"`}
-                    {pagination.total > 5000 && !debouncedSearchTerm && (
-                      <span className="text-orange-600 ml-2">
-                        ⚠️ Large directory - consider using search filter
+                  <div className="flex items-center space-x-2">
+                    <span>
+                      📁 {files.length} of {pagination.total.toLocaleString()} files
+                      {debouncedSearchTerm && (
+                        <span className="text-blue-600 ml-1">matching "{debouncedSearchTerm}"</span>
+                      )}
+                    </span>
+                    {pagination.total > 1000 && !debouncedSearchTerm && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        ⚡ Large directory
                       </span>
                     )}
-                  </>
+                    {viewMode === 'paginated' && (
+                      <span className="text-green-600">⚡ Optimized view</span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -967,66 +1177,115 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <input
-                    type="checkbox"
-                    checked={selectedFiles.length === filteredFiles.length && filteredFiles.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Size
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Modified
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredFiles.map((file) => (
-                <FileRow
-                  key={file.id}
-                  file={file}
-                  isSelected={selectedFiles.includes(file.id)}
-                  onSelect={handleSelectFile}
-                  onPreview={handlePreviewClick}
-                  onDownload={handleDownloadFile}
-                  onDelete={async () => {
-                    if (confirm(`Delete ${file.name}?`)) {
-                      try {
-                        await apiService.deleteFile(file.id);
-                        // Reset to first page after deletion
-                        setPagination(prev => ({ ...prev, currentPage: 1 }));
-                        setFiles([]);
-                        await loadProjectData(1, debouncedSearchTerm, false, currentFolderId);
-                      } catch (error) {
-                        console.error('Failed to delete file:', error);
+        {/* Files Display - List or Grid View */}
+        {displayMode === 'list' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedFiles.length === filteredFiles.length && filteredFiles.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Size
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Modified
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredFiles.map((file) => (
+                  <FileRow
+                    key={file.id}
+                    file={file}
+                    isSelected={selectedFiles.includes(file.id)}
+                    onSelect={handleSelectFile}
+                    onPreview={handlePreviewClick}
+                    onDownload={handleDownloadFile}
+                    onDelete={async () => {
+                      if (confirm(`Delete ${file.name}?`)) {
+                        try {
+                          await apiService.deleteFile(file.id);
+                          // Reset to first page after deletion
+                          setPagination(prev => ({ ...prev, currentPage: 1 }));
+                          setFiles([]);
+                          await loadProjectData(1, debouncedSearchTerm, false, currentFolderId);
+                        } catch (error) {
+                          console.error('Failed to delete file:', error);
+                        }
                       }
-                    }
-                  }}
-                  processingStatus={processingStatuses[file.id]}
-                  renderProcessingBadge={renderProcessingBadge}
-                  isArchive={isArchive(file.name)}
-                  isPreviewable={isPreviewable(file.content_type)}
+                    }}
+                    processingStatus={processingStatuses[file.id]}
+                    renderProcessingBadge={renderProcessingBadge}
+                    isArchive={isArchive(file.name)}
+                    isPreviewable={isPreviewable(file.content_type)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div>
+            {/* Grid view header with select all */}
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.length === filteredFiles.length && filteredFiles.length > 0}
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-              ))}
-            </tbody>
-          </table>
-        </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedFiles.length > 0 ? `${selectedFiles.length} selected` : 'Select all'}
+                </span>
+              </div>
+              <span className="text-sm text-gray-500">
+                {filteredFiles.length} files
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {filteredFiles.map((file) => (
+              <FileCard
+                key={file.id}
+                file={file}
+                isSelected={selectedFiles.includes(file.id)}
+                onToggleSelect={handleSelectFile}
+                onPreview={handlePreviewClick}
+                onDownload={handleDownloadFile}
+                onDelete={async (fileId) => {
+                  if (confirm(`Delete ${file.name}?`)) {
+                    try {
+                      await apiService.deleteFile(file.id);
+                      // Reset to first page after deletion
+                      setPagination(prev => ({ ...prev, currentPage: 1 }));
+                      setFiles([]);
+                      await loadProjectData(1, debouncedSearchTerm, false, currentFolderId);
+                    } catch (error) {
+                      console.error('Failed to delete file:', error);
+                    }
+                  }
+                }}
+                processingStatus={processingStatuses[file.id]}
+              />
+            ))}
+            </div>
+          </div>
+        )}
 
         {/* Loading More Indicator for Infinite Scroll */}
         {viewMode === 'infinite' && pagination.hasMorePages && (
@@ -1034,91 +1293,62 @@ export default function ProjectDetailPage() {
             ref={loadMoreRef}
             className="flex items-center justify-center py-8"
           >
-            {files.length >= 1000 ? (
-              <div className="text-center">
-                <p className="text-orange-600 mb-2">📊 Performance Limit Reached</p>
-                <p className="text-sm text-gray-600 mb-4">
-                  Showing 1000 files for optimal performance. {pagination.total - files.length} more available.
+            {files.length >= 500 ? (
+              <div className="text-center bg-orange-50 rounded-lg p-6 border border-orange-200">
+                <div className="text-4xl mb-2">📊</div>
+                <h3 className="text-lg font-medium text-orange-800 mb-2">Performance Limit Reached</h3>
+                <p className="text-sm text-orange-700 mb-4">
+                  Showing 500 files for optimal performance.<br/>
+                  <span className="font-medium">{(pagination.total - files.length).toLocaleString()}</span> more files available.
                 </p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setViewMode('paginated')}
-                >
-                  Switch to Paginated View
-                </Button>
+                <div className="flex justify-center space-x-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleViewModeChange('paginated')}
+                    className="bg-white border-orange-300 text-orange-700 hover:bg-orange-50"
+                  >
+                    📄 Switch to Paginated View
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSearchTerm('')}
+                    className="bg-white border-orange-300 text-orange-700 hover:bg-orange-50"
+                  >
+                    🔍 Try Search Filter
+                  </Button>
+                </div>
               </div>
             ) : isLoadingMore ? (
-              <div className="flex items-center space-x-2 text-gray-500">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                <span>Loading more files...</span>
+              <div className="flex items-center justify-center space-x-3 text-gray-500 py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="text-sm">Loading more files...</span>
               </div>
             ) : (
-              <Button 
-                variant="outline" 
-                onClick={loadMoreFiles}
-                disabled={isLoadingMore}
-              >
-                Load More Files ({pagination.total - files.length} remaining)
-              </Button>
+              <div className="text-center py-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMoreFiles}
+                  disabled={isLoadingMore}
+                  className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  📥 Load More Files ({(pagination.total - files.length).toLocaleString()} remaining)
+                </Button>
+              </div>
             )}
           </div>
         )}
 
-        {/* Pagination Controls for Paginated View */}
+        {/* Enhanced Pagination Controls */}
         {viewMode === 'paginated' && pagination.totalPages > 1 && (
-          <div className="bg-white px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Page {pagination.currentPage} of {pagination.totalPages} 
-              ({pagination.total} total files)
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(pagination.currentPage - 1)}
-                disabled={pagination.currentPage <= 1 || isLoading}
-              >
-                Previous
-              </Button>
-              
-              {/* Page Numbers */}
-              <div className="flex space-x-1">
-                {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
-                  let pageNum;
-                  if (pagination.totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else {
-                    const start = Math.max(1, pagination.currentPage - 2);
-                    const end = Math.min(pagination.totalPages, start + 4);
-                    pageNum = start + i;
-                    if (pageNum > end) return null;
-                  }
-                  
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={pagination.currentPage === pageNum ? "primary" : "outline"}
-                      size="sm"
-                      onClick={() => goToPage(pageNum)}
-                      disabled={isLoading}
-                      className="w-8 h-8 p-0"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                }).filter(Boolean)}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(pagination.currentPage + 1)}
-                disabled={pagination.currentPage >= pagination.totalPages || isLoading}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.pageSize}
+            onPageChange={goToPage}
+            isLoading={isLoading}
+            showInfo={true}
+          />
         )}
 
         {filteredFiles.length === 0 && !isLoading && (
